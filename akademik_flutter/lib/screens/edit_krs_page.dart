@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../models/mahasiswa.dart';
+import '../models/jadwal.dart';
 import '../services/krs_service.dart';
 import '../services/mahasiswa_service.dart';
 import '../services/jadwal_service.dart';
 
 class EditKrsPage extends StatefulWidget {
-  final Map<String, dynamic> krsData; // Wajib menerima data lama dari halaman sebelumnya
-
+  final Map<String, dynamic> krsData;
   const EditKrsPage({super.key, required this.krsData});
 
   @override
@@ -19,19 +21,17 @@ class _EditKrsPageState extends State<EditKrsPage> {
   String? _selectedMahasiswa;
   String? _selectedJadwal;
 
-  List<dynamic> _mahasiswaList = [];
-  List<dynamic> _jadwalList = [];
-  
+  List<Mahasiswa> _mahasiswaList = [];
+  List<Jadwal> _jadwalList = [];
+
   bool _isLoadingData = true;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    // Tarik ID lama untuk dimunculkan di Dropdown
     _selectedMahasiswa = widget.krsData['mahasiswa_id']?.toString();
     _selectedJadwal = widget.krsData['jadwal_id']?.toString();
-    
     _loadData();
   }
 
@@ -42,14 +42,19 @@ class _EditKrsPageState extends State<EditKrsPage> {
         JadwalService().getJadwal(),
       ]);
       setState(() {
-        _mahasiswaList = results[0];
-        _jadwalList = results[1];
+        _mahasiswaList = results[0] as List<Mahasiswa>;
+        _jadwalList = results[1] as List<Jadwal>;
         _isLoadingData = false;
       });
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingData = false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal memuat data'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal memuat data'),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     }
   }
@@ -57,20 +62,28 @@ class _EditKrsPageState extends State<EditKrsPage> {
   Future<void> _submitData() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
-
     try {
-      final idKrs = widget.krsData['id'].toString();
-      
-      // Kirim data ke kurir
-      await _krsService.updateKrs(idKrs, _selectedMahasiswa!, _selectedJadwal!);
-
+      await _krsService.updateKrs(
+        widget.krsData['id'].toString(),
+        _selectedMahasiswa!,
+        _selectedJadwal!,
+      );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('KRS berhasil diupdate!'), backgroundColor: Colors.green));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('KRS berhasil diupdate!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
       Navigator.pop(context, true);
-
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: AppColors.error,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -79,42 +92,107 @@ class _EditKrsPageState extends State<EditKrsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111827),
-      appBar: AppBar(title: const Text("Edit KRS", style: TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF1F2937)),
-      body: _isLoadingData 
-        ? const Center(child: CircularProgressIndicator(color: Colors.blue)) // Loading biru untuk Edit
-        : Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedMahasiswa,
-                  items: _mahasiswaList.map((m) => DropdownMenuItem(value: m['id'].toString(), child: Text("${m['nim']} - ${m['user']?['name'] ?? ''}", overflow: TextOverflow.ellipsis))).toList(),
-                  onChanged: (v) => setState(() => _selectedMahasiswa = v),
-                  dropdownColor: const Color(0xFF1F2937), style: const TextStyle(color: Colors.white), isExpanded: true,
-                  decoration: InputDecoration(labelText: "Pilih Mahasiswa", labelStyle: const TextStyle(color: Colors.grey), filled: true, fillColor: const Color(0xFF1F2937), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
-                  validator: (v) => v == null ? 'Wajib pilih' : null,
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedJadwal,
-                  isExpanded: true,
-                  items: _jadwalList.map((j) => DropdownMenuItem(value: j['id'].toString(), child: Text("${j['mata_kuliah']?['nama_matkul']} | ${j['hari']} ${j['jam_mulai']?.substring(0,5) ?? ''}", overflow: TextOverflow.ellipsis))).toList(),
-                  onChanged: (v) => setState(() => _selectedJadwal = v),
-                  dropdownColor: const Color(0xFF1F2937), style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(labelText: "Pilih Jadwal", labelStyle: const TextStyle(color: Colors.grey), filled: true, fillColor: const Color(0xFF1F2937), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
-                  validator: (v) => v == null ? 'Wajib pilih' : null,
-                ),
-                const SizedBox(height: 30),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, minimumSize: const Size(double.infinity, 50)),
-                  onPressed: _isSaving ? null : _submitData,
-                  child: _isSaving ? const CircularProgressIndicator(color: Colors.white) : const Text("Update KRS", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                )
-              ],
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text(
+          "Edit KRS",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
+      body: _isLoadingData
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.info),
+            )
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedMahasiswa,
+                    items: _mahasiswaList
+                        .map(
+                          (m) => DropdownMenuItem(
+                            value: m.id,
+                            child: Text(
+                              "${m.nim} - ${m.namaUser}",
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedMahasiswa = v),
+                    dropdownColor: AppColors.surface,
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: "Pilih Mahasiswa",
+                      labelStyle: const TextStyle(
+                        color: AppColors.textSecondary,
+                      ),
+                      filled: true,
+                      fillColor: AppColors.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    validator: (v) => v == null ? 'Wajib pilih' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedJadwal,
+                    isExpanded: true,
+                    items: _jadwalList
+                        .map(
+                          (j) => DropdownMenuItem(
+                            value: j.id,
+                            child: Text(
+                              "${j.namaMatkul} | ${j.hari} ${j.jamFormatted}",
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedJadwal = v),
+                    dropdownColor: AppColors.surface,
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    decoration: InputDecoration(
+                      labelText: "Pilih Jadwal",
+                      labelStyle: const TextStyle(
+                        color: AppColors.textSecondary,
+                      ),
+                      filled: true,
+                      fillColor: AppColors.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    validator: (v) => v == null ? 'Wajib pilih' : null,
+                  ),
+                  const SizedBox(height: 30),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.info,
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    onPressed: _isSaving ? null : _submitData,
+                    child: _isSaving
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            "Update KRS",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
             ),
-          ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import '../services/auth_service.dart';
 import 'jadwal_page.dart';
 import 'login.dart';
@@ -9,56 +10,71 @@ import 'krs_page.dart';
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
-  // Fungsi logout
   void _logout(BuildContext context) async {
-    // Tampilkan dialog konfirmasi
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Logout"),
-        content: const Text("Yakin ingin logout?"),
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          "Logout",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: const Text(
+          "Yakin ingin logout?",
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Batal"),
+            child: const Text(
+              "Batal",
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("Ya, Keluar"),
+            child: const Text(
+              "Ya, Keluar",
+              style: TextStyle(color: AppColors.error),
+            ),
           ),
         ],
       ),
     );
-    // Kalau pilih batal, berhenti di sini
     if (confirm != true) return;
-    // Proses logout
+
     final authService = AuthService();
-    // Ini kunci hapus token dari memori hp
     await authService.logout();
 
     if (context.mounted) {
-      // Lempar ke halaman login
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
         (route) => false,
       );
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Berhasil logout!")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Berhasil logout!"),
+          backgroundColor: AppColors.success,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Dashboard Mahasiswa"),
+        title: const Text(
+          "Dashboard Mahasiswa",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
         actions: [
-          // Tombol Logout
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: AppColors.error),
             onPressed: () => _logout(context),
             tooltip: 'Logout',
           ),
@@ -69,12 +85,11 @@ class DashboardScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Kartu sambutan
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.blue,
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Column(
@@ -83,15 +98,15 @@ class DashboardScreen extends StatelessWidget {
                   Text(
                     "Halo, Mahasiswa!",
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Colors.black,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   SizedBox(height: 8),
                   Text(
-                    "Selamat datang di Sistem akademik",
-                    style: TextStyle(color: Colors.white70),
+                    "Selamat datang di Sistem Akademik",
+                    style: TextStyle(color: Colors.black54),
                   ),
                 ],
               ),
@@ -99,11 +114,13 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: 24),
             const Text(
               "Menu Utama",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 16),
-
-            // Grid Menu Kotak-kotak
             Expanded(
               child: GridView.count(
                 crossAxisCount: 2,
@@ -143,7 +160,6 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // Membuat kartu menu agar kode lebih rapih
   Widget _buildMenuCard(
     BuildContext context,
     IconData icon,
@@ -151,29 +167,31 @@ class DashboardScreen extends StatelessWidget {
     Color color,
   ) {
     return Card(
+      color: AppColors.cardBackground,
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
+        borderRadius: BorderRadius.circular(12),
         onTap: () {
           if (label == "Profil Saya") {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const ProfileScreen()),
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
             );
-          } else if (label.contains("krs") || label.contains("Kartu Studi")) {
+          } else if (label.contains("Kartu Studi")) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const KrsPage()),
+              MaterialPageRoute(builder: (_) => const KrsPage()),
             );
           } else if (label == "Nilai / Transkrip") {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const NilaiScreen()),
+              MaterialPageRoute(builder: (_) => const NilaiScreen()),
             );
           } else if (label == "Jadwal Kuliah") {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const JadwalPage()),
+              MaterialPageRoute(builder: (_) => const JadwalPage()),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -186,7 +204,13 @@ class DashboardScreen extends StatelessWidget {
           children: [
             Icon(icon, size: 50, color: color),
             const SizedBox(height: 10),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
           ],
         ),
       ),

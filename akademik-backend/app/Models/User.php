@@ -2,22 +2,23 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * Model User.
+ * Merepresentasikan akun pengguna yang bisa memiliki role:
+ * admin, dosen, atau mahasiswa.
+ */
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, HasUuids;
-    
+
     /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
+     * Atribut yang boleh diisi secara massal.
      */
     protected $fillable = [
         'name',
@@ -27,14 +28,15 @@ class User extends Authenticatable
         'nim_nip',
     ];
 
+    /**
+     * Nilai default untuk atribut.
+     */
     protected $attributes = [
         'role' => 'admin',
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
+     * Atribut yang disembunyikan saat serialisasi (JSON).
      */
     protected $hidden = [
         'password',
@@ -42,23 +44,27 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * Konversi tipe data atribut.
      */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password'          => 'hashed',
         ];
     }
 
+    /**
+     * Relasi: Satu user bisa memiliki satu profil dosen.
+     */
     public function dosen()
     {
         return $this->hasOne(Dosen::class);
     }
 
+    /**
+     * Relasi: Satu user bisa memiliki satu profil mahasiswa.
+     */
     public function mahasiswa()
     {
         return $this->hasOne(Mahasiswa::class);

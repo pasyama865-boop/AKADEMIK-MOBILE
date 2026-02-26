@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import '../services/matakuliah_service.dart';
 
 class EditMataKuliahPage extends StatefulWidget {
@@ -14,7 +15,6 @@ class _EditMataKuliahPageState extends State<EditMataKuliahPage> {
   final _namaController = TextEditingController();
   final _sksController = TextEditingController();
   final _semesterController = TextEditingController();
-
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   final MatakuliahService _service = MatakuliahService();
@@ -31,7 +31,6 @@ class _EditMataKuliahPageState extends State<EditMataKuliahPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
-
     try {
       await _service.updateMataKuliah(widget.data['id'].toString(), {
         'kode_matkul': _kodeController.text,
@@ -39,22 +38,23 @@ class _EditMataKuliahPageState extends State<EditMataKuliahPage> {
         'sks': _sksController.text,
         'semester_paket': _semesterController.text,
       });
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Berhasil diupdate!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
         );
-      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -70,12 +70,12 @@ class _EditMataKuliahPageState extends State<EditMataKuliahPage> {
       child: TextFormField(
         controller: ctrl,
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: AppColors.textPrimary),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey),
+          labelStyle: const TextStyle(color: AppColors.textSecondary),
           filled: true,
-          fillColor: const Color(0xFF1F2937),
+          fillColor: AppColors.surface,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none,
@@ -89,10 +89,14 @@ class _EditMataKuliahPageState extends State<EditMataKuliahPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111827),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Edit Matkul", style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF1F2937),
+        title: const Text(
+          "Edit Matkul",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
       body: Form(
         key: _formKey,
@@ -106,12 +110,12 @@ class _EditMataKuliahPageState extends State<EditMataKuliahPage> {
             const SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: AppColors.info,
                 minimumSize: const Size(double.infinity, 50),
               ),
               onPressed: _isLoading ? null : _submit,
               child: _isLoading
-                  ? const CircularProgressIndicator()
+                  ? const CircularProgressIndicator(color: Colors.white)
                   : const Text(
                       "Update",
                       style: TextStyle(

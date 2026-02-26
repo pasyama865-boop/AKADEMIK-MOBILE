@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import '../services/mahasiswa_service.dart';
 
 class EditMahasiswaPage extends StatefulWidget {
   final Map<String, dynamic> mahasiswaData;
-
   const EditMahasiswaPage({super.key, required this.mahasiswaData});
 
   @override
@@ -17,7 +17,6 @@ class _EditMahasiswaPageState extends State<EditMahasiswaPage> {
   final _nimController = TextEditingController();
   final _jurusanController = TextEditingController();
   final _angkatanController = TextEditingController();
-
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   final MahasiswaService _mahasiswaService = MahasiswaService();
@@ -36,39 +35,33 @@ class _EditMahasiswaPageState extends State<EditMahasiswaPage> {
   Future<void> _submitData() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
-
     try {
-      final idMhs = widget.mahasiswaData['id'].toString();
-
-      final dataKirim = {
-        'nama_user': _namaController.text,
-        'email_user': _emailController.text,
-        'password_user': _passwordController.text,
-        'nim': _nimController.text,
-        'jurusan': _jurusanController.text,
-        'angkatan': _angkatanController.text,
-      };
-
-      await _mahasiswaService.updateMahasiswa(idMhs, dataKirim);
-
+      await _mahasiswaService
+          .updateMahasiswa(widget.mahasiswaData['id'].toString(), {
+            'nama_user': _namaController.text,
+            'email_user': _emailController.text,
+            'password_user': _passwordController.text,
+            'nim': _nimController.text,
+            'jurusan': _jurusanController.text,
+            'angkatan': _angkatanController.text,
+          });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Data Mahasiswa berhasil diubah!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString().replaceAll('Exception: ', '')),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
-      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -99,23 +92,22 @@ class _EditMahasiswaPageState extends State<EditMahasiswaPage> {
         controller: controller,
         obscureText: isPassword,
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: AppColors.textPrimary),
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
-          hintStyle: const TextStyle(color: Colors.grey),
-          labelStyle: const TextStyle(color: Colors.grey),
+          hintStyle: const TextStyle(color: AppColors.textSecondary),
+          labelStyle: const TextStyle(color: AppColors.textSecondary),
           filled: true,
-          fillColor: const Color(0xFF1F2937),
+          fillColor: AppColors.surface,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none,
           ),
         ),
         validator: (value) {
-          if (isRequired && (value == null || value.isEmpty)) {
+          if (isRequired && (value == null || value.isEmpty))
             return '$label wajib diisi';
-          }
           return null;
         },
       ),
@@ -125,14 +117,14 @@ class _EditMahasiswaPageState extends State<EditMahasiswaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111827),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
           "Edit Data Mahasiswa",
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.textPrimary),
         ),
-        backgroundColor: const Color(0xFF1F2937),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
       body: Form(
         key: _formKey,
@@ -142,7 +134,7 @@ class _EditMahasiswaPageState extends State<EditMahasiswaPage> {
             const Text(
               "INFORMASI AKUN LOGIN",
               style: TextStyle(
-                color: Colors.amber,
+                color: AppColors.info,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -155,13 +147,11 @@ class _EditMahasiswaPageState extends State<EditMahasiswaPage> {
               isPassword: true,
               hint: "Kosongkan jika tidak ingin ganti password",
             ),
-
-            const Divider(color: Colors.grey, height: 30),
-
+            const Divider(color: AppColors.divider, height: 30),
             const Text(
               "PROFIL MAHASISWA",
               style: TextStyle(
-                color: Colors.amber,
+                color: AppColors.info,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -174,13 +164,13 @@ class _EditMahasiswaPageState extends State<EditMahasiswaPage> {
               isRequired: true,
               isNumber: true,
             ),
-
             const SizedBox(height: 20),
-
             SizedBox(
               height: 50,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.info,
+                ),
                 onPressed: _isLoading ? null : _submitData,
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)

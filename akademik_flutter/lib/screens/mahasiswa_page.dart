@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../models/mahasiswa.dart';
 import '../services/mahasiswa_service.dart';
 import 'create_mahasiswa_page.dart';
 import 'edit_mahasiswa_page.dart';
@@ -12,7 +14,7 @@ class MahasiswaPage extends StatefulWidget {
 
 class _MahasiswaPageState extends State<MahasiswaPage> {
   final MahasiswaService _mahasiswaService = MahasiswaService();
-  late Future<List<dynamic>> _mahasiswaFuture;
+  late Future<List<Mahasiswa>> _mahasiswaFuture;
 
   @override
   void initState() {
@@ -27,23 +29,41 @@ class _MahasiswaPageState extends State<MahasiswaPage> {
     await _mahasiswaFuture;
   }
 
-  // FUNGSI KONFIRMASI & HAPUS
-  Future<void> _confirmDelete(BuildContext context, String id, String nama) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    String id,
+    String nama,
+  ) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2937),
-        title: const Text('Konfirmasi Hapus', style: TextStyle(color: Colors.red)),
-        content: Text('Hapus mahasiswa $nama beserta akun login-nya?', style: const TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Konfirmasi Hapus',
+          style: TextStyle(color: AppColors.error),
+        ),
+        content: Text(
+          'Hapus mahasiswa $nama beserta akun login-nya?',
+          style: const TextStyle(color: AppColors.textPrimary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Ya, Hapus', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Ya, Hapus',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -52,15 +72,21 @@ class _MahasiswaPageState extends State<MahasiswaPage> {
     if (confirm == true) {
       try {
         await _mahasiswaService.deleteMahasiswa(id);
-        if (!context.mounted) return; // Penjaga Pintu Asinkron
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mahasiswa berhasil dihapus'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Mahasiswa berhasil dihapus'),
+            backgroundColor: AppColors.success,
+          ),
         );
         _refreshData();
       } catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -69,40 +95,55 @@ class _MahasiswaPageState extends State<MahasiswaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111827),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Data Mahasiswa", style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF1F2937),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          "Data Mahasiswa",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
-      // TOMBOL TAMBAH MAHASISWA 
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.amber,
+        backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.black),
         onPressed: () async {
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const CreateMahasiswaPage()),
+            MaterialPageRoute(
+              builder: (context) => const CreateMahasiswaPage(),
+            ),
           );
           if (result == true) _refreshData();
         },
       ),
       body: RefreshIndicator(
         onRefresh: _refreshData,
-        color: Colors.amber,
-        backgroundColor: const Color(0xFF1F2937),
-        child: FutureBuilder<List<dynamic>>(
+        color: AppColors.primary,
+        backgroundColor: AppColors.surface,
+        child: FutureBuilder<List<Mahasiswa>>(
           future: _mahasiswaFuture,
           builder: (context, snapshot) {
-            
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: Colors.amber));
-            } 
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              );
+            }
             if (snapshot.hasError) {
-              return Center(child: Text("Error: ${snapshot.error}", style: const TextStyle(color: Colors.red)));
-            } 
+              return Center(
+                child: Text(
+                  "Error: ${snapshot.error}",
+                  style: const TextStyle(color: AppColors.error),
+                ),
+              );
+            }
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(child: Text("Belum ada data Mahasiswa.", style: TextStyle(color: Colors.grey)));
+              return const Center(
+                child: Text(
+                  "Belum ada data Mahasiswa.",
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              );
             }
 
             final mahasiswaList = snapshot.data!;
@@ -111,27 +152,30 @@ class _MahasiswaPageState extends State<MahasiswaPage> {
               padding: const EdgeInsets.all(16),
               itemCount: mahasiswaList.length,
               itemBuilder: (context, index) {
-                final item = mahasiswaList[index];
-
-                final idMhs = item['id'].toString(); 
-                final nama = item['user']?['name'] ?? 'Tanpa Nama';
-                final nim = item['nim'] ?? '-';
-                final jurusan = item['jurusan'] ?? '-';
-                final angkatan = item['angkatan']?.toString() ?? '-';
+                final mhs = mahasiswaList[index];
 
                 return Card(
-                  color: const Color(0xFF1F2937),
+                  color: AppColors.cardBackground,
                   margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(16),
                     leading: CircleAvatar(
                       backgroundColor: Colors.blue[900],
-                      child: const Icon(Icons.person_outline, color: Colors.white),
+                      child: const Icon(
+                        Icons.person_outline,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                     title: Text(
-                      nama,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      mhs.namaUser,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 8.0),
@@ -139,33 +183,74 @@ class _MahasiswaPageState extends State<MahasiswaPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.green[800], borderRadius: BorderRadius.circular(4)),
-                            child: Text(nim, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green[800],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              mhs.nim,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 6),
-                          Text("Jurusan: $jurusan", style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                          Text("Angkatan: $angkatan", style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                          Text(
+                            "Jurusan: ${mhs.jurusan}",
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Text(
+                            "Angkatan: ${mhs.angkatan}",
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    // TOMBOL EDIT DAN HAPUS
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          icon: const Icon(Icons.edit, color: AppColors.info),
                           onPressed: () async {
                             final result = await Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (context) => EditMahasiswaPage(mahasiswaData: item)),
+                              MaterialPageRoute(
+                                builder: (context) => EditMahasiswaPage(
+                                  mahasiswaData: {
+                                    'id': mhs.id,
+                                    'user_id': mhs.userId,
+                                    'nim': mhs.nim,
+                                    'jurusan': mhs.jurusan,
+                                    'angkatan': mhs.angkatan,
+                                    'user': {
+                                      'name': mhs.namaUser,
+                                      'email': mhs.emailUser,
+                                    },
+                                  },
+                                ),
+                              ),
                             );
                             if (result == true) _refreshData();
                           },
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: () => _confirmDelete(context, idMhs, nama),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: AppColors.error,
+                          ),
+                          onPressed: () =>
+                              _confirmDelete(context, mhs.id, mhs.namaUser),
                         ),
                       ],
                     ),

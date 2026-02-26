@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../models/krs.dart';
 import '../services/krs_service.dart';
 
 class NilaiScreen extends StatefulWidget {
@@ -10,7 +12,7 @@ class NilaiScreen extends StatefulWidget {
 
 class _NilaiScreenState extends State<NilaiScreen> {
   final KrsService _krsService = KrsService();
-  late Future<List<dynamic>> _krsFuture;
+  late Future<List<Krs>> _krsFuture;
 
   @override
   void initState() {
@@ -18,35 +20,39 @@ class _NilaiScreenState extends State<NilaiScreen> {
     _refreshData();
   }
 
-  // Fungsi untuk memuat ulang data
   void _refreshData() {
     setState(() {
       _krsFuture = _krsService.getKrsList();
     });
   }
 
-  // Logika Hapus Data
-  Future<void> _handleDelete(String? id, String namaMatkul) async {
-    // Validasi ID
-    if (id == null) {
-      _showSnackBar("Error: ID Data tidak ditemukan", isError: true);
-      return;
-    }
-
-    // Dialog Konfirmasi
+  Future<void> _handleDelete(String id, String namaMatkul) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Hapus Mata Kuliah"),
-        content: Text("Yakin ingin membatalkan $namaMatkul?"),
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          "Hapus Mata Kuliah",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          "Yakin ingin membatalkan $namaMatkul?",
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Batal"),
+            child: const Text(
+              "Batal",
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("Hapus", style: TextStyle(color: Colors.red)),
+            child: const Text(
+              "Hapus",
+              style: TextStyle(color: AppColors.error),
+            ),
           ),
         ],
       ),
@@ -54,29 +60,24 @@ class _NilaiScreenState extends State<NilaiScreen> {
 
     if (confirm != true) return;
 
-    // Proses Hapus ke Server
     try {
       await _krsService.deleteKrs(id);
-      
       if (mounted) {
         _showSnackBar("Mata kuliah berhasil dihapus!");
-        // Refresh otomatis
-        _refreshData(); 
+        _refreshData();
       }
     } catch (e) {
-      debugPrint("ERROR DELETE: $e");
       if (mounted) {
         _showSnackBar("Gagal: ${e.toString()}", isError: true);
       }
     }
   }
 
-  // Helper untuk menampilkan pesan SnackBar
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? AppColors.error : AppColors.success,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -85,75 +86,81 @@ class _NilaiScreenState extends State<NilaiScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Daftar Nilai & KRS"),
+        title: const Text(
+          "Daftar Nilai & KRS",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
         centerTitle: true,
       ),
-      body: FutureBuilder<List<dynamic>>(
+      body: FutureBuilder<List<Krs>>(
         future: _krsFuture,
         builder: (context, snapshot) {
-          // STATE 1: Loading
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            );
           }
-
-          // Error
           if (snapshot.hasError) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: AppColors.error,
+                  ),
                   const SizedBox(height: 16),
-                  Text("Terjadi Kesalahan:\n${snapshot.error}", textAlign: TextAlign.center),
+                  Text(
+                    "Terjadi Kesalahan:\n${snapshot.error}",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.textSecondary),
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                    ),
                     onPressed: _refreshData,
-                    child: const Text("Coba Lagi"),
-                  )
+                    child: const Text(
+                      "Coba Lagi",
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  ),
                 ],
               ),
             );
           }
-
-          // Data Kosong
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
               child: Text(
                 "Belum ada mata kuliah yang diambil.",
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
               ),
             );
           }
 
-          //  Ada Data
           final krsList = snapshot.data!;
           return ListView.builder(
             padding: const EdgeInsets.all(12),
             itemCount: krsList.length,
-            itemBuilder: (context, index) {
-              return _buildKrsCard(krsList[index]);
-            },
+            itemBuilder: (context, index) => _buildKrsCard(krsList[index]),
           );
         },
       ),
     );
   }
 
-  // Kartu Item KRS
-  Widget _buildKrsCard(dynamic krsData) {
-    final jadwal = krsData['jadwal'] ?? {};
-    final matkulData = jadwal['matakuliah'] ?? {};
-
-    final String namaMatkul = matkulData['nama_matkul'] ?? 'Tanpa Nama';
-    final String kodeMatkul = matkulData['kode_matkul'] ?? '-';
-    final int sks = matkulData['sks'] ?? 0;
-    final dynamic nilai = krsData['nilai_akhir'] ?? 'Belum Dinilai';
-    final String? idKrs = krsData['id']?.toString();
-
-    final bool isNilaiMasuk = nilai != 'Belum Dinilai';
+  Widget _buildKrsCard(Krs krs) {
+    final String? nilai = krs.nilaiAkhir;
+    final bool isNilaiMasuk = nilai != null && nilai.isNotEmpty;
 
     return Card(
+      color: AppColors.cardBackground,
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -163,39 +170,53 @@ class _NilaiScreenState extends State<NilaiScreen> {
           radius: 24,
           backgroundColor: _getWarnaNilai(nilai),
           child: Text(
-            isNilaiMasuk ? nilai.toString() : '-',
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            isNilaiMasuk ? nilai : '-',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
         ),
         title: Text(
-          namaMatkul,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          krs.namaMatkul,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: AppColors.textPrimary,
+          ),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 8.0),
-          child: Text("$kodeMatkul • $sks SKS"),
+          child: Text(
+            "${krs.hari} • ${krs.jamFormatted}",
+            style: const TextStyle(color: AppColors.textSecondary),
+          ),
         ),
-        // Tombol Sampah hanya muncul jika nilai belum keluar
         trailing: !isNilaiMasuk
             ? IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                icon: const Icon(Icons.delete_outline, color: AppColors.error),
                 tooltip: "Batalkan Mata Kuliah",
-                onPressed: () => _handleDelete(idKrs, namaMatkul),
+                onPressed: () => _handleDelete(krs.id, krs.namaMatkul),
               )
             : null,
       ),
     );
   }
 
-  // Helper Warna Nilai
   Color _getWarnaNilai(dynamic nilai) {
     switch (nilai) {
-      case 'A': return Colors.green;
-      case 'B': return Colors.blue;
-      case 'C': return Colors.orange;
-      case 'D': return Colors.red;
-      case 'E': return Colors.black;
-      default: return Colors.grey; 
+      case 'A':
+        return Colors.green;
+      case 'B':
+        return Colors.blue;
+      case 'C':
+        return Colors.orange;
+      case 'D':
+        return Colors.red;
+      case 'E':
+        return Colors.black;
+      default:
+        return Colors.grey;
     }
   }
 }

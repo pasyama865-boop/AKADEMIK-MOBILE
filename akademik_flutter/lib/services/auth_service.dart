@@ -1,11 +1,44 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/api_config.dart';
 
+/// Service untuk menangani proses autentikasi pengguna.
+/// Meliputi login, logout, manajemen token, dan pengambilan data profil.
+///
+/// Menggunakan Singleton pattern agar hanya ada 1 instance
+/// dan SharedPreferences tidak di-load berulang-ulang.
 class AuthService {
-  final String baseUrl = 'http://192.168.100.42:8000/api';
+  // ============================================================
+  // SINGLETON PATTERN
+  // ============================================================
 
-  // Fungsi Login
+  static final AuthService _instance = AuthService._internal();
+
+  /// Factory constructor mengembalikan instance yang sama.
+  factory AuthService() => _instance;
+
+  AuthService._internal();
+
+  /// Cache SharedPreferences agar tidak dipanggil getInstance() berkali-kali.
+  SharedPreferences? _prefs;
+
+  /// URL dasar API dari config terpusat.
+  final String baseUrl = ApiConfig.baseUrl;
+
+  /// Mengambil SharedPreferences (dengan caching).
+  Future<SharedPreferences> get prefs async {
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs!;
+  }
+
+  // ============================================================
+  // AUTENTIKASI
+  // ============================================================
+
+  /// Melakukan proses login dengan email dan password.
+  /// Menyimpan token, role, dan nama ke SharedPreferences jika berhasil.
+  /// Mengembalikan `true` jika login berhasil.
   Future<bool> login(String email, String password) async {
     final url = Uri.parse('$baseUrl/login');
 
@@ -18,42 +51,33 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // Simpan token ke shared preferences
-        await saveToken(data['access_token']);
-        // Simpan role dan nama
-        String role = data['user']['role'];
-        String name = data['user']['name'];
-        // Buka memori hape dan simpan role serta nama
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('role', role);
-        await prefs.setString('name', name);
+
+        // Simpan token autentikasi
+        await simpanToken(data['access_token']);
+
+        // Simpan role dan nama user ke penyimpanan lokal
+        final p = await prefs;
+        await p.setString('role', data['user']['role']);
+        await p.setString('name', data['user']['name']);
+
         return true;
-      } else {
-        final error = jsonDecode(response.body);
-        throw Exception(error['message'] ?? 'Login Gagal');
       }
+
+      // Login gagal - lempar exception dengan pesan dari server
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'Login Gagal');
     } catch (e) {
       throw Exception('Gagal terhubung ke server: $e');
     }
   }
 
-  // Fungsi Simpan token baru
-  Future<void> saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('auth_token', token);
-  }
-
-  // Fungsi ambil token
-  Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
-  }
-
-  // Fungsi logout
+  /// Melakukan proses logout.
+  /// Menghapus token dari server (API) dan dari penyimpanan lokal.
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Panggil API logout ke laravel jika ada
-    final token = prefs.getString('auth_token');
+    final p = await prefs;
+    final token = p.getString('auth_token');
+
+    // Panggil API logout di backend jika token tersedia
     if (token != null) {
       final url = Uri.parse('$baseUrl/logout');
       try {
@@ -65,51 +89,75 @@ class AuthService {
           },
         );
       } catch (e) {
-        throw Exception();
+        // Abaikan error saat logout ke server,
+        // token lokal tetap akan dihapus
       }
     }
-    await prefs.remove('auth_token');
+
+    // Hapus token dari penyimpanan lokal
+    await p.remove('auth_token');
   }
 
-  // Fungsi Ambil data profil user
+  // ============================================================
+  // MANAJEMEN TOKEN
+  // ============================================================
+
+  /// Menyimpan token autentikasi ke penyimpanan lokal.
+  Future<void> simpanToken(String token) async {
+    final p = await prefs;
+    await p.setString('auth_token', token);
+  }
+
+  /// Mengambil token autentikasi dari penyimpanan lokal.
+  /// Mengembalikan `null` jika token tidak ditemukan.
+  Future<String?> getToken() async {
+    final p = await prefs;
+    return p.getString('auth_token');
+  }
+
+  // ============================================================
+  // DATA PROFIL & STATISTIK
+  // ============================================================
+
+  /// Mengambil data profil user yang sedang login.
   Future<Map<String, dynamic>> getProfile() async {
     final token = await getToken();
-    if (token == null) throw Exception('Token tidak di temukan, Silahkan login ulang');
+    if (token == null) {
+      throw Exception('Token tidak ditemukan, silahkan login ulang');
+    }
 
     final url = Uri.parse('$baseUrl/me');
     final response = await http.get(
       url,
       headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
+
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
-    } else {
-      throw Exception('Gagal mengambil data profil');
     }
+
+    throw Exception('Gagal mengambil data profil');
   }
 
-  // Fungsi ambil statistik admin
+  /// Mengambil data statistik untuk dashboard admin.
   Future<Map<String, dynamic>> getAdminStats() async {
     final token = await getToken();
     if (token == null) throw Exception('Token tidak ditemukan');
 
     final url = Uri.parse('$baseUrl/admin/stats');
-
     final response = await http.get(
       url,
-      headers: {'Authorization': 'Bearer $token', 'Accep': 'application/json'},
+      headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
-    } else {
-      throw Exception('Gagal mengambil statistik admin');
     }
+
+    throw Exception('Gagal mengambil statistik admin');
   }
 
-  
-
-  // Fungsi ambil daftar jadwal mata kuliah
+  /// Mengambil daftar jadwal mata kuliah.
   Future<List<dynamic>> getJadwalList() async {
     final token = await getToken();
     if (token == null) throw Exception('Token tidak ditemukan');
@@ -119,11 +167,12 @@ class AuthService {
       url,
       headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
+
     if (response.statusCode == 200) {
-      final decodeData = jsonDecode(response.body);
-      return decodeData['data'];
-    } else {
-      throw Exception('Gagal mengambil daftar jadwal mata kuliah');
+      final dataResponse = jsonDecode(response.body);
+      return dataResponse['data'];
     }
+
+    throw Exception('Gagal mengambil daftar jadwal mata kuliah');
   }
 }

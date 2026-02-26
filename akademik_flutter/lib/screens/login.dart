@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; 
+import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_colors.dart';
 import '../services/auth_service.dart';
-import 'mahasiswa_dashboard.dart'; 
-import 'dosen_dashboard.dart'; 
-import 'admin_dashboard.dart'; 
+import 'mahasiswa_dashboard.dart';
+import 'dosen_dashboard.dart';
+import 'admin_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,13 +16,10 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
   bool _isLoading = false;
 
   void _handleLogin() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final auth = AuthService();
@@ -31,33 +29,31 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success) {
-        // 1. BUKA DOMPET UNTUK MELIHAT KTP Role
         final prefs = await SharedPreferences.getInstance();
-        String? role = prefs.getString('role'); 
+        String? role = prefs.getString('role');
 
         if (!mounted) return;
-
-        // Tampilkan pesan sukses
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Login Berhasil! Selamat datang, $role")),
+          SnackBar(
+            content: Text("Login Berhasil! Selamat datang, $role"),
+            backgroundColor: AppColors.success,
+          ),
         );
 
-        // 2. LOGIKA POLISI LALU LINTAS Mengarahkan sesuai Role
         if (role == 'admin') {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const AdminDashboard()),
+            MaterialPageRoute(builder: (_) => const AdminDashboard()),
           );
         } else if (role == 'dosen') {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const DosenDashboard()),
+            MaterialPageRoute(builder: (_) => const DosenDashboard()),
           );
         } else {
-          // Jika role adalah mahasiswa 
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+            MaterialPageRoute(builder: (_) => const DashboardScreen()),
           );
         }
       } else {
@@ -65,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Email atau Password salah!"),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
             ),
           );
         }
@@ -75,65 +71,99 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Error: ${e.toString()}"),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Login Akademik")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.school, size: 80, color: Colors.blue),
-            const SizedBox(height: 20),
-            const Text(
-              "Silakan Masuk",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 30),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: "Email",
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.email),
+      backgroundColor: AppColors.background,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.school, size: 80, color: AppColors.primary),
+              const SizedBox(height: 16),
+              const Text(
+                "Sistem Akademik",
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Password",
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock),
+              const SizedBox(height: 8),
+              const Text(
+                "Silakan masuk untuk melanjutkan",
+                style: TextStyle(color: AppColors.textSecondary),
               ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _handleLogin,
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("MASUK", style: TextStyle(fontSize: 18)),
+              const SizedBox(height: 40),
+              TextField(
+                controller: _emailController,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: InputDecoration(
+                  labelText: "Email",
+                  labelStyle: const TextStyle(color: AppColors.textSecondary),
+                  prefixIcon: const Icon(Icons.email, color: AppColors.primary),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: InputDecoration(
+                  labelText: "Password",
+                  labelStyle: const TextStyle(color: AppColors.textSecondary),
+                  prefixIcon: const Icon(Icons.lock, color: AppColors.primary),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: _isLoading ? null : _handleLogin,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.black)
+                      : const Text(
+                          "MASUK",
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

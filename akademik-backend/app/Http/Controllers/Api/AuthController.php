@@ -8,45 +8,62 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Controller untuk menangani proses autentikasi pengguna.
+ * Meliputi fungsi login dan logout menggunakan Laravel Sanctum.
+ */
 class AuthController extends Controller
 {
+    /**
+     * Proses login pengguna.
+     *
+     * Memvalidasi email dan password, lalu mengembalikan token akses
+     * beserta data user (termasuk relasi dosen/mahasiswa) jika berhasil.
+     */
     public function login(Request $request)
     {
-        // 1. Validasi Input
+        // Validasi input dari pengguna
         $request->validate([
-            'email' => 'required|email',
+            'email'    => 'required|email',
             'password' => 'required',
         ]);
 
-        // 2. Cari User
+        // Cari user berdasarkan email
         $user = User::where('email', $request->email)->first();
 
-        // 3. Cek Password
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        // Periksa apakah user ditemukan dan password cocok
+        if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['Login gagal. Pastikan email dan password benar.'],
             ]);
         }
+
+        // Muat relasi dosen dan mahasiswa untuk data lengkap
         $user->load(['dosen', 'mahasiswa']);
 
-        // 4. Buat Token
+        // Buat token autentikasi baru
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // 5. Kirim Respon Lengkap
+        // Kirim respons login berhasil
         return response()->json([
-            'message' => 'Login berhasil',
+            'message'      => 'Login berhasil',
             'access_token' => $token,
-            'token_type' => 'Bearer',
-            'user' => $user,
+            'token_type'   => 'Bearer',
+            'user'         => $user,
         ]);
     }
 
+    /**
+     * Proses logout pengguna.
+     *
+     * Menghapus token akses yang sedang digunakan saat ini.
+     */
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
-            'message' => 'Logout berhasil'
+            'message' => 'Logout berhasil',
         ]);
     }
 }

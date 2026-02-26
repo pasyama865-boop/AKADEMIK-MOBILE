@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../models/krs.dart';
 import '../services/krs_service.dart';
 import 'create_krs_page.dart';
 import 'edit_krs_page.dart';
@@ -12,7 +14,7 @@ class KrsPage extends StatefulWidget {
 
 class _KrsPageState extends State<KrsPage> {
   final KrsService _krsService = KrsService();
-  late Future<List<dynamic>> _krsFuture;
+  late Future<List<Krs>> _krsFuture;
 
   @override
   void initState() {
@@ -27,19 +29,39 @@ class _KrsPageState extends State<KrsPage> {
     await _krsFuture;
   }
 
-  Future<void> _confirmDelete(BuildContext context, String id, String namaMhs, String matkul) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    String id,
+    String namaMhs,
+    String matkul,
+  ) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2937),
-        title: const Text('Konfirmasi Hapus KRS', style: TextStyle(color: Colors.red)),
-        content: Text('Hapus KRS mata kuliah $matkul untuk mahasiswa $namaMhs?', style: const TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Konfirmasi Hapus KRS',
+          style: TextStyle(color: AppColors.error),
+        ),
+        content: Text(
+          'Hapus KRS mata kuliah $matkul untuk mahasiswa $namaMhs?',
+          style: const TextStyle(color: AppColors.textPrimary),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Kembali', style: TextStyle(color: Colors.grey))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Kembali',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Ya, Hapus', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Ya, Hapus',
+              style: TextStyle(color: AppColors.textPrimary),
+            ),
           ),
         ],
       ),
@@ -49,11 +71,21 @@ class _KrsPageState extends State<KrsPage> {
       try {
         await _krsService.deleteKrs(id);
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('KRS berhasil dibatalkan'), backgroundColor: Colors.green));
-        _refreshData(); 
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('KRS berhasil dibatalkan'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        _refreshData();
       } catch (e) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     }
   }
@@ -61,43 +93,53 @@ class _KrsPageState extends State<KrsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111827),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Data KRS", style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF1F2937),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          "Data KRS",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
-            floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.amber,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.black),
         onPressed: () async {
           final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const CreateKrsPage()),
           );
-
-          if (result == true) {
-            _refreshData();
-          }
+          if (result == true) _refreshData();
         },
       ),
-      // -------------------------------------------
-
       body: RefreshIndicator(
         onRefresh: _refreshData,
-        color: Colors.amber,
-        backgroundColor: const Color(0xFF1F2937),
-        child: FutureBuilder<List<dynamic>>(
+        color: AppColors.primary,
+        backgroundColor: AppColors.surface,
+        child: FutureBuilder<List<Krs>>(
           future: _krsFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: Colors.amber));
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              );
             }
             if (snapshot.hasError) {
-              return Center(child: Text("Error: ${snapshot.error}", style: const TextStyle(color: Colors.red)));
+              return Center(
+                child: Text(
+                  "Error: ${snapshot.error}",
+                  style: const TextStyle(color: AppColors.error),
+                ),
+              );
             }
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(child: Text("Belum ada data KRS.", style: TextStyle(color: Colors.grey)));
+              return const Center(
+                child: Text(
+                  "Belum ada data KRS.",
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              );
             }
 
             final krsList = snapshot.data!;
@@ -106,57 +148,77 @@ class _KrsPageState extends State<KrsPage> {
               padding: const EdgeInsets.all(16),
               itemCount: krsList.length,
               itemBuilder: (context, index) {
-                final item = krsList[index];
-                
-                final idKrs = item['id'].toString();
-                final namaMhs = item['mahasiswa']?['user']?['name'] ?? 'Tanpa Nama';
-                final nimMhs = item['mahasiswa']?['nim'] ?? '-';
-                final namaMatkul = item['jadwal']?['mata_kuliah']?['nama_matkul'] ?? 'Matkul ?';
-                final hari = item['jadwal']?['hari'] ?? '-';
-                final jam = (item['jadwal']?['jam_mulai'] != null && item['jadwal']['jam_mulai'].length >= 5)
-                    ? item['jadwal']['jam_mulai'].substring(0, 5)
+                final krs = krsList[index];
+
+                final jamDisplay = krs.jamMulai.length >= 5
+                    ? krs.jamMulai.substring(0, 5)
                     : '-';
 
                 return Card(
-                  color: const Color(0xFF1F2937),
+                  color: AppColors.cardBackground,
                   margin: const EdgeInsets.only(bottom: 10),
                   child: ListTile(
                     leading: const CircleAvatar(
-                      backgroundColor: Colors.amber,
-                      child: Icon(Icons.assignment_ind, color: Colors.white), 
+                      backgroundColor: AppColors.primary,
+                      child: Icon(
+                        Icons.assignment_ind,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                     title: Text(
-                      namaMhs,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      krs.namaMahasiswa,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text(
-                      "$namaMatkul • $hari ($jam)",
-                      style: const TextStyle(color: Colors.grey),
+                      "${krs.namaMatkul} • ${krs.hari} ($jamDisplay)",
+                      style: const TextStyle(color: AppColors.textSecondary),
                       overflow: TextOverflow.ellipsis,
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          icon: const Icon(Icons.edit, color: AppColors.info),
                           onPressed: () async {
                             final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => EditKrsPage(krsData: item),
+                                builder: (context) => EditKrsPage(
+                                  krsData: {
+                                    'id': krs.id,
+                                    'mahasiswa_id': krs.mahasiswaId,
+                                    'jadwal_id': krs.jadwalId,
+                                    'mahasiswa': {
+                                      'user': {'name': krs.namaMahasiswa},
+                                      'nim': krs.nimMahasiswa,
+                                    },
+                                    'jadwal': {
+                                      'mata_kuliah': {
+                                        'nama_matkul': krs.namaMatkul,
+                                      },
+                                    },
+                                  },
+                                ),
                               ),
                             );
-                            if (result == true) {
-                              _refreshData();
-                            }
+                            if (result == true) _refreshData();
                           },
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: () {
-                            _confirmDelete(context, idKrs, namaMhs, nimMhs ,);
-                          },
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: AppColors.error,
+                          ),
+                          onPressed: () => _confirmDelete(
+                            context,
+                            krs.id,
+                            krs.nimMahasiswa,
+                            krs.namaMahasiswa,
+                          ),
                         ),
                       ],
                     ),

@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../models/mata_kuliah.dart';
+import '../models/dosen.dart';
+import '../models/ruangan.dart';
+import '../models/semester.dart';
 import '../services/jadwal_service.dart';
 import '../services/matakuliah_service.dart';
 import '../services/dosen_service.dart';
@@ -15,7 +20,6 @@ class CreateJadwalPage extends StatefulWidget {
 class _CreateJadwalPageState extends State<CreateJadwalPage> {
   final _formKey = GlobalKey<FormState>();
   final JadwalService _jadwalService = JadwalService();
-
   final _kuotaController = TextEditingController();
   final _jamMulaiController = TextEditingController();
   final _jamSelesaiController = TextEditingController();
@@ -26,10 +30,10 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
   String? _selectedSemester;
   String? _selectedHari;
 
-  List<dynamic> _matkulList = [];
-  List<dynamic> _dosenList = [];
-  List<dynamic> _ruanganList = [];
-  List<dynamic> _semesterList = [];
+  List<MataKuliah> _matkulList = [];
+  List<Dosen> _dosenList = [];
+  List<Ruangan> _ruanganList = [];
+  List<Semester> _semesterList = [];
 
   bool _isLoadingData = true;
   bool _isSaving = false;
@@ -57,24 +61,22 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
         RuanganService().getRuanganList(),
         SemesterService().getSemesterList(),
       ]);
-
       setState(() {
-        _matkulList = results[0];
-        _dosenList = results[1];
-        _ruanganList = results[2];
-        _semesterList = results[3];
+        _matkulList = results[0] as List<MataKuliah>;
+        _dosenList = results[1] as List<Dosen>;
+        _ruanganList = results[2] as List<Ruangan>;
+        _semesterList = results[3] as List<Semester>;
         _isLoadingData = false;
       });
     } catch (e) {
       setState(() => _isLoadingData = false);
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Gagal memuat data pilihan'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
-      }
     }
   }
 
@@ -85,25 +87,22 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Colors.amber,
-              onPrimary: Colors.black,
-              surface: Color(0xFF1F2937),
-              onSurface: Colors.white,
-            ),
+      builder: (context, child) => Theme(
+        data: ThemeData.dark().copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: AppColors.primary,
+            onPrimary: Colors.black,
+            surface: AppColors.surface,
+            onSurface: AppColors.textPrimary,
           ),
-          child: child!,
-        );
-      },
+        ),
+        child: child!,
+      ),
     );
     if (picked != null) {
       setState(() {
-        final jam = picked.hour.toString().padLeft(2, '0');
-        final menit = picked.minute.toString().padLeft(2, '0');
-        controller.text = "$jam:$menit";
+        controller.text =
+            "${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}";
       });
     }
   }
@@ -111,7 +110,6 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
   Future<void> _submitData() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
-
     try {
       await _jadwalService.createJadwal({
         'mata_kuliah_id': _selectedMatkul,
@@ -123,22 +121,23 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
         'jam_selesai': _jamSelesaiController.text,
         'kuota': _kuotaController.text,
       });
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Jadwal berhasil ditambahkan!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
         );
-      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -147,16 +146,19 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111827),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
           "Tambah Jadwal",
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.textPrimary),
         ),
-        backgroundColor: const Color(0xFF1F2937),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
       body: _isLoadingData
-          ? const Center(child: CircularProgressIndicator(color: Colors.amber))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : Form(
               key: _formKey,
               child: ListView(
@@ -165,21 +167,20 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
                   const Text(
                     "PILIH DATA UTAMA",
                     style: TextStyle(
-                      color: Colors.amber,
+                      color: AppColors.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 10),
-
                   _buildDropdown(
                     label: "Mata Kuliah",
                     value: _selectedMatkul,
                     items: _matkulList
                         .map(
-                          (item) => DropdownMenuItem<String>(
-                            value: item['id'].toString(),
+                          (mk) => DropdownMenuItem<String>(
+                            value: mk.id,
                             child: Text(
-                              "${item['kode_matkul']} - ${item['nama_matkul']}",
+                              "${mk.kodeMatkul} - ${mk.namaMatkul}",
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -187,16 +188,15 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
                         .toList(),
                     onChanged: (val) => setState(() => _selectedMatkul = val),
                   ),
-
                   _buildDropdown(
                     label: "Dosen Pengajar",
                     value: _selectedDosen,
                     items: _dosenList
                         .map(
-                          (item) => DropdownMenuItem<String>(
-                            value: item['user_id'].toString(),
+                          (d) => DropdownMenuItem<String>(
+                            value: d.userId,
                             child: Text(
-                              item['user']?['name'] ?? 'Tanpa Nama',
+                              d.namaLengkap,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -204,17 +204,15 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
                         .toList(),
                     onChanged: (val) => setState(() => _selectedDosen = val),
                   ),
-
-                  // --- TAMBAHAN DROPDOWN SEMESTER ---
                   _buildDropdown(
                     label: "Semester",
                     value: _selectedSemester,
                     items: _semesterList
                         .map(
-                          (item) => DropdownMenuItem<String>(
-                            value: item['id'].toString(),
+                          (s) => DropdownMenuItem<String>(
+                            value: s.id,
                             child: Text(
-                              item['nama'] ?? 'Tanpa Nama Semester',
+                              s.namaSemester,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -222,16 +220,15 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
                         .toList(),
                     onChanged: (val) => setState(() => _selectedSemester = val),
                   ),
-
                   _buildDropdown(
                     label: "Ruangan",
                     value: _selectedRuangan,
                     items: _ruanganList
                         .map(
-                          (item) => DropdownMenuItem<String>(
-                            value: item['id'].toString(),
+                          (r) => DropdownMenuItem<String>(
+                            value: r.id,
                             child: Text(
-                              "${item['nama']} (${item['gedung'] ?? '-'})",
+                              "${r.nama} (${r.gedung ?? '-'})",
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -239,31 +236,28 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
                         .toList(),
                     onChanged: (val) => setState(() => _selectedRuangan = val),
                   ),
-
-                  const Divider(color: Colors.grey, height: 30),
+                  const Divider(color: AppColors.divider, height: 30),
                   const Text(
                     "WAKTU & KUOTA",
                     style: TextStyle(
-                      color: Colors.amber,
+                      color: AppColors.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 10),
-
                   _buildDropdown(
                     label: "Hari",
                     value: _selectedHari,
                     items: _hariList
                         .map(
-                          (hari) => DropdownMenuItem<String>(
-                            value: hari,
-                            child: Text(hari),
+                          (h) => DropdownMenuItem<String>(
+                            value: h,
+                            child: Text(h),
                           ),
                         )
                         .toList(),
                     onChanged: (val) => setState(() => _selectedHari = val),
                   ),
-
                   Row(
                     children: [
                       Expanded(
@@ -281,18 +275,19 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
                       ),
                     ],
                   ),
-
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: TextFormField(
                       controller: _kuotaController,
                       keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: AppColors.textPrimary),
                       decoration: InputDecoration(
                         labelText: "Kuota Mahasiswa",
-                        labelStyle: const TextStyle(color: Colors.grey),
+                        labelStyle: const TextStyle(
+                          color: AppColors.textSecondary,
+                        ),
                         filled: true,
-                        fillColor: const Color(0xFF1F2937),
+                        fillColor: AppColors.surface,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide.none,
@@ -301,12 +296,10 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
                       validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
+                      backgroundColor: AppColors.primary,
                       minimumSize: const Size(double.infinity, 50),
                     ),
                     onPressed: _isSaving ? null : _submitData,
@@ -338,13 +331,13 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
         initialValue: value,
         items: items,
         onChanged: onChanged,
-        dropdownColor: const Color(0xFF1F2937),
-        style: const TextStyle(color: Colors.white),
+        dropdownColor: AppColors.surface,
+        style: const TextStyle(color: AppColors.textPrimary),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey),
+          labelStyle: const TextStyle(color: AppColors.textSecondary),
           filled: true,
-          fillColor: const Color(0xFF1F2937),
+          fillColor: AppColors.surface,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none,
@@ -362,13 +355,13 @@ class _CreateJadwalPageState extends State<CreateJadwalPage> {
         controller: controller,
         readOnly: true,
         onTap: () => _selectTime(context, controller),
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: AppColors.textPrimary),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey),
+          labelStyle: const TextStyle(color: AppColors.textSecondary),
           filled: true,
-          fillColor: const Color(0xFF1F2937),
-          suffixIcon: const Icon(Icons.access_time, color: Colors.amber),
+          fillColor: AppColors.surface,
+          suffixIcon: const Icon(Icons.access_time, color: AppColors.primary),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none,

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../models/user_admin.dart';
 import '../services/user_service.dart';
 import 'create_admin_page.dart';
 import 'edit_admin_page.dart';
@@ -12,16 +14,14 @@ class UserPage extends StatefulWidget {
 
 class _UserPageState extends State<UserPage> {
   final UserService _userService = UserService();
-  late Future<List<dynamic>> _userFuture;
+  late Future<List<UserAdmin>> _userFuture;
 
   @override
   void initState() {
     super.initState();
-    // 1. Inisialisasi awal saat halaman dibuka
     _userFuture = _userService.getUserList();
   }
 
-  // 2. Fungsi sakti untuk memotret ulang data
   Future<void> _refreshData() async {
     setState(() {
       _userFuture = _userService.getUserList();
@@ -33,12 +33,31 @@ class _UserPageState extends State<UserPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2937),
-        title: const Text('Hapus Akses Admin?', style: TextStyle(color: Colors.red)),
-        content: Text('Hapus akses admin secara permanen untuk "$nama"?', style: const TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Hapus Akses Admin?',
+          style: TextStyle(color: AppColors.error),
+        ),
+        content: Text(
+          'Hapus akses admin secara permanen untuk "$nama"?',
+          style: const TextStyle(color: AppColors.textPrimary),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal', style: TextStyle(color: Colors.grey))),
-          ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(context, true), child: const Text('Hapus', style: TextStyle(color: Colors.white))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Hapus',
+              style: TextStyle(color: AppColors.textPrimary),
+            ),
+          ),
         ],
       ),
     );
@@ -47,13 +66,21 @@ class _UserPageState extends State<UserPage> {
       try {
         await _userService.deleteUser(id);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Admin dihapus'), backgroundColor: Colors.green));
-        
-        // 3. Panggil fungsi sakti setelah sukses menghapus
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Admin dihapus'),
+            backgroundColor: AppColors.success,
+          ),
+        );
         _refreshData();
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     }
   }
@@ -61,62 +88,69 @@ class _UserPageState extends State<UserPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111827),
-      appBar: AppBar(title: const Text("Data Admin Sistem", style: TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF1F2937)),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text(
+          "Data Admin Sistem",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.amber,
+        backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.black),
         onPressed: () async {
-          // 4. Tunggu oleh-oleh (nilai true) dari halaman sebelah
-          final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateAdminPage()));
-          
-          // 5. Jika ada data baru, jepret ulang!
-          if (result == true) {
-            _refreshData();
-          }
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const CreateAdminPage()),
+          );
+          if (result == true) _refreshData();
         },
       ),
       body: RefreshIndicator(
         onRefresh: _refreshData,
-        color: Colors.amber, backgroundColor: const Color(0xFF1F2937),
-        
-        // 6. KEMBALI MENGGUNAKAN FUTURE BUILDER
-        child: FutureBuilder<List<dynamic>>(
+        color: AppColors.primary,
+        backgroundColor: AppColors.surface,
+        child: FutureBuilder<List<UserAdmin>>(
           future: _userFuture,
           builder: (context, snapshot) {
-            // State: Sedang Loading
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: Colors.amber));
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              );
             }
-            
-            // State: Jika Error
             if (snapshot.hasError) {
-              return Center(child: Text("Error: ${snapshot.error}", style: const TextStyle(color: Colors.red)));
+              return Center(
+                child: Text(
+                  "Error: ${snapshot.error}",
+                  style: const TextStyle(color: AppColors.error),
+                ),
+              );
             }
-            
-            // State: Jika Kosong
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
                   SizedBox(height: 220),
-                  Center(child: Text("Belum ada data admin.", style: TextStyle(color: Colors.grey))),
+                  Center(
+                    child: Text(
+                      "Belum ada data admin.",
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ),
                 ],
               );
             }
 
-            // State: Jika Ada Data
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: snapshot.data!.length,
               itemBuilder: (context, index) {
-                final item = snapshot.data![index];
-                final id = item['id'].toString();
-                final nama = item['name'] ?? '-';
-                final email = item['email'] ?? '-';
+                final admin = snapshot.data![index];
 
                 return Card(
-                  color: const Color(0xFF1F2937),
+                  color: AppColors.cardBackground,
                   margin: const EdgeInsets.only(bottom: 12),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -126,20 +160,52 @@ class _UserPageState extends State<UserPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(child: Text(nama, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))),
+                            Expanded(
+                              child: Text(
+                                admin.name,
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
-                              child: const Text("ADMIN", style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
-                            )
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                "ADMIN",
+                                style: TextStyle(
+                                  color: AppColors.error,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            const Icon(Icons.email, color: Colors.grey, size: 16),
+                            const Icon(
+                              Icons.email,
+                              color: AppColors.textSecondary,
+                              size: 16,
+                            ),
                             const SizedBox(width: 8),
-                            Text(email, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                            Text(
+                              admin.email,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 14,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 10),
@@ -147,13 +213,35 @@ class _UserPageState extends State<UserPage> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              icon: const Icon(
+                                Icons.edit,
+                                color: AppColors.info,
+                              ),
                               onPressed: () async {
-                                final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => EditAdminPage(userData: item)));
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => EditAdminPage(
+                                      userData: {
+                                        'id': admin.id,
+                                        'name': admin.name,
+                                        'email': admin.email,
+                                        'role': admin.role,
+                                      },
+                                    ),
+                                  ),
+                                );
                                 if (result == true) _refreshData();
                               },
                             ),
-                            IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => _confirmDelete(id, nama)),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: AppColors.error,
+                              ),
+                              onPressed: () =>
+                                  _confirmDelete(admin.id, admin.name),
+                            ),
                           ],
                         ),
                       ],

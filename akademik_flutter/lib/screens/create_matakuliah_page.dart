@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import '../services/matakuliah_service.dart';
 
 class CreateMataKuliahPage extends StatefulWidget {
@@ -13,7 +14,6 @@ class _CreateMataKuliahPageState extends State<CreateMataKuliahPage> {
   final _namaController = TextEditingController();
   final _sksController = TextEditingController();
   final _semesterController = TextEditingController();
-
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   final MatakuliahService _service = MatakuliahService();
@@ -21,7 +21,6 @@ class _CreateMataKuliahPageState extends State<CreateMataKuliahPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
-
     try {
       await _service.createMataKuliah({
         'kode_matkul': _kodeController.text,
@@ -29,22 +28,23 @@ class _CreateMataKuliahPageState extends State<CreateMataKuliahPage> {
         'sks': _sksController.text,
         'semester_paket': _semesterController.text,
       });
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Berhasil disimpan!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
         );
-      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -60,12 +60,12 @@ class _CreateMataKuliahPageState extends State<CreateMataKuliahPage> {
       child: TextFormField(
         controller: ctrl,
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: AppColors.textPrimary),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey),
+          labelStyle: const TextStyle(color: AppColors.textSecondary),
           filled: true,
-          fillColor: const Color(0xFF1F2937),
+          fillColor: AppColors.surface,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none,
@@ -79,13 +79,14 @@ class _CreateMataKuliahPageState extends State<CreateMataKuliahPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111827),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
           "Tambah Matkul",
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.textPrimary),
         ),
-        backgroundColor: const Color(0xFF1F2937),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
       body: Form(
         key: _formKey,
@@ -99,12 +100,12 @@ class _CreateMataKuliahPageState extends State<CreateMataKuliahPage> {
             const SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber,
+                backgroundColor: AppColors.primary,
                 minimumSize: const Size(double.infinity, 50),
               ),
               onPressed: _isLoading ? null : _submit,
               child: _isLoading
-                  ? const CircularProgressIndicator()
+                  ? const CircularProgressIndicator(color: Colors.black)
                   : const Text(
                       "Simpan",
                       style: TextStyle(

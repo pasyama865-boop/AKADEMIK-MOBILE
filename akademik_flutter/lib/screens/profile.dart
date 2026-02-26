@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import '../services/auth_service.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -9,70 +10,96 @@ class ProfileScreen extends StatelessWidget {
     final authService = AuthService();
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Profil Saya")),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text(
+          "Profil Saya",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
       body: FutureBuilder<Map<String, dynamic>>(
-        future: authService.getProfile(), 
+        future: authService.getProfile(),
         builder: (context, snapshot) {
-          // 1. SEDANG LOADING
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            );
           }
-
-          // 2. JIKA ERROR
           if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
+            return Center(
+              child: Text(
+                "Error: ${snapshot.error}",
+                style: const TextStyle(color: AppColors.error),
+              ),
+            );
           }
-
-          // 3. JIKA SUKSES
           if (snapshot.hasData) {
             final user = snapshot.data!;
             return Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  const Center(
-                    child: CircleAvatar(
-                      radius: 50,
-                      child: Icon(Icons.person, size: 50),
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: AppColors.primary,
+                    child: const Icon(
+                      Icons.person,
+                      size: 50,
+                      color: Colors.black,
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // Kartu Info
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.person),
-                      title: const Text("Nama Lengkap"),
-                      subtitle: Text(user['name'] ?? '-'),
-                    ),
+                  _profileCard(
+                    Icons.person,
+                    "Nama Lengkap",
+                    user['name'] ?? '-',
                   ),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.email),
-                      title: const Text("Email"),
-                      subtitle: Text(user['email'] ?? '-'),
-                    ),
+                  _profileCard(Icons.email, "Email", user['email'] ?? '-'),
+                  _profileCard(
+                    Icons.badge,
+                    "NIM / NIP",
+                    user['nim_nip'] ?? '-',
                   ),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.badge),
-                      title: const Text("NIM / NIP"),
-                      subtitle: Text(user['nim_nip'] ?? '-'),
-                    ),
-                  ),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.admin_panel_settings),
-                      title: const Text("Peran (Role)"),
-                      subtitle: Text(user['role'] ?? '-'),
-                    ),
+                  _profileCard(
+                    Icons.admin_panel_settings,
+                    "Peran (Role)",
+                    user['role'] ?? '-',
                   ),
                 ],
               ),
             );
           }
-
-          return const Center(child: Text("Data tidak ditemukan"));
+          return const Center(
+            child: Text(
+              "Data tidak ditemukan",
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          );
         },
+      ),
+    );
+  }
+
+  Widget _profileCard(IconData icon, String title, String subtitle) {
+    return Card(
+      color: AppColors.cardBackground,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(icon, color: AppColors.primary),
+        title: Text(
+          title,
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
     );
   }

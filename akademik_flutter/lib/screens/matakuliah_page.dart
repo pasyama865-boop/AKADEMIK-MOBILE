@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../models/mata_kuliah.dart';
 import '../services/matakuliah_service.dart';
 import 'create_matakuliah_page.dart';
 import 'edit_matakuliah_page.dart';
@@ -12,7 +14,7 @@ class MataKuliahPage extends StatefulWidget {
 
 class _MataKuliahPageState extends State<MataKuliahPage> {
   final MatakuliahService _matkulService = MatakuliahService();
-  late Future<List<dynamic>> _matkulFuture;
+  late Future<List<MataKuliah>> _matkulFuture;
 
   @override
   void initState() {
@@ -28,22 +30,41 @@ class _MataKuliahPageState extends State<MataKuliahPage> {
   }
 
   // FUNGSI KONFIRMASI & HAPUS
-  Future<void> _confirmDelete(BuildContext context, String id, String nama) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    String id,
+    String nama,
+  ) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2937),
-        title: const Text('Konfirmasi Hapus', style: TextStyle(color: Colors.red)),
-        content: Text('Hapus matakuliah $nama beserta akun login-nya?', style: const TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Konfirmasi Hapus',
+          style: TextStyle(color: AppColors.error),
+        ),
+        content: Text(
+          'Hapus mata kuliah $nama?',
+          style: const TextStyle(color: AppColors.textPrimary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Ya, Hapus', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Ya, Hapus',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -52,15 +73,21 @@ class _MataKuliahPageState extends State<MataKuliahPage> {
     if (confirm == true) {
       try {
         await _matkulService.deleteMataKuliah(id);
-        if (!context.mounted) return; 
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mahasiswa berhasil dihapus'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Mata kuliah berhasil dihapus'),
+            backgroundColor: AppColors.success,
+          ),
         );
         _refreshData();
       } catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -69,40 +96,56 @@ class _MataKuliahPageState extends State<MataKuliahPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111827), 
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Data Mata Kuliah", style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF1F2937),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          "Data Mata Kuliah",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
-      // TOMBOL TAMBAH matakuliah 
+      // TOMBOL TAMBAH matakuliah
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.amber,
+        backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.black),
         onPressed: () async {
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const CreateMataKuliahPage()),
+            MaterialPageRoute(
+              builder: (context) => const CreateMataKuliahPage(),
+            ),
           );
           if (result == true) _refreshData();
         },
       ),
       body: RefreshIndicator(
         onRefresh: _refreshData,
-        color: Colors.amber,
-        backgroundColor: const Color(0xFF1F2937),
-        child: FutureBuilder<List<dynamic>>(
+        color: AppColors.primary,
+        backgroundColor: AppColors.surface,
+        child: FutureBuilder<List<MataKuliah>>(
           future: _matkulFuture,
           builder: (context, snapshot) {
-            
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: Colors.amber));
-            } 
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              );
+            }
             if (snapshot.hasError) {
-              return Center(child: Text("Error: ${snapshot.error}", style: const TextStyle(color: Colors.red)));
-            } 
+              return Center(
+                child: Text(
+                  "Error: ${snapshot.error}",
+                  style: const TextStyle(color: AppColors.error),
+                ),
+              );
+            }
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(child: Text("Belum ada data Mata Kuliah.", style: TextStyle(color: Colors.grey)));
+              return const Center(
+                child: Text(
+                  "Belum ada data Mata Kuliah.",
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              );
             }
 
             final matkulList = snapshot.data!;
@@ -111,66 +154,107 @@ class _MataKuliahPageState extends State<MataKuliahPage> {
               padding: const EdgeInsets.all(16),
               itemCount: matkulList.length,
               itemBuilder: (context, index) {
-                final item = matkulList[index];
-
-                // PEMETAAN DATA 
-                final idMtk = item['id'].toString();
-                final kode = item['kode_matkul'] ?? '-';
-                final nama = item['nama_matkul'] ?? 'Mata Kuliah Tidak Diketahui';
-                final sks = item['sks']?.toString() ?? '0';
-                final semester = item['semester_paket']?.toString() ?? '-';
+                final matkul = matkulList[index];
 
                 return Card(
-                  color: const Color(0xFF1F2937),
+                  color: AppColors.cardBackground,
                   margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(16),
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.blue[900],
-                        child: const Icon(Icons.menu_book, color: Colors.white),
-                      ),
-                      title: Text(
-                        nama,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(color: Colors.green[800], borderRadius: BorderRadius.circular(4)),
-                          child: Text(kode, style: const TextStyle(color: Colors.white, fontSize: 12)),
-                        ),
-                        const SizedBox(height: 6),
-                        Text("$sks SKS", style: const TextStyle(color: Colors.grey, fontSize: 14)),
-                        Text("$semester SEMESTER", style: const TextStyle(color: Colors.grey, fontSize: 14)),
-                      ],
-                    ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  trailing: Row(
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.blue[900],
+                      child: const Icon(
+                        Icons.menu_book,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    title: Text(
+                      matkul.namaMatkul,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green[800],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              matkul.kodeMatkul,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            "${matkul.sks} SKS",
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            "${matkul.semesterPaket} SEMESTER",
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          icon: const Icon(Icons.edit, color: AppColors.info),
                           onPressed: () async {
                             final result = await Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (context) => EditMataKuliahPage(data: item)),
+                              MaterialPageRoute(
+                                builder: (context) => EditMataKuliahPage(
+                                  data: {
+                                    'id': matkul.id,
+                                    'kode_matkul': matkul.kodeMatkul,
+                                    'nama_matkul': matkul.namaMatkul,
+                                    'sks': matkul.sks,
+                                    'semester_paket': matkul.semesterPaket,
+                                  },
+                                ),
+                              ),
                             );
                             if (result == true) _refreshData();
                           },
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: () => _confirmDelete(context, idMtk, nama),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: AppColors.error,
+                          ),
+                          onPressed: () => _confirmDelete(
+                            context,
+                            matkul.id,
+                            matkul.namaMatkul,
+                          ),
                         ),
                       ],
-                    ),),
+                    ),
                   ),
                 );
               },

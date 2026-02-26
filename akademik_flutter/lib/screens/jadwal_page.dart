@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../models/jadwal.dart';
 import '../services/jadwal_service.dart';
 import 'create_jadwal_page.dart';
 import 'edit_jadwal_page.dart';
@@ -11,10 +13,8 @@ class JadwalPage extends StatefulWidget {
 }
 
 class _JadwalPageState extends State<JadwalPage> {
-  // Panggil Service Jadwal
   final JadwalService _jadwalService = JadwalService();
-  // Siapkan variabel untuk menampung proses pengambilan data
-  late Future<List<dynamic>> _jadwalFuture;
+  late Future<List<Jadwal>> _jadwalFuture;
 
   @override
   void initState() {
@@ -22,7 +22,6 @@ class _JadwalPageState extends State<JadwalPage> {
     _jadwalFuture = _jadwalService.getJadwal();
   }
 
-  // Fungsi Refresh Tarik Layar
   Future<void> _refreshData() async {
     setState(() {
       _jadwalFuture = _jadwalService.getJadwal();
@@ -38,26 +37,29 @@ class _JadwalPageState extends State<JadwalPage> {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2937),
+        backgroundColor: AppColors.surface,
         title: const Text(
           'Konfirmasi Hapus',
-          style: TextStyle(color: Colors.red),
+          style: TextStyle(color: AppColors.error),
         ),
         content: Text(
           'Hapus jadwal mata kuliah $matkul?',
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: AppColors.textPrimary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
               'Ya, Hapus',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: AppColors.textPrimary),
             ),
           ),
         ],
@@ -71,14 +73,17 @@ class _JadwalPageState extends State<JadwalPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Jadwal berhasil dihapus'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
         _refreshData();
       } catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -88,7 +93,7 @@ class _JadwalPageState extends State<JadwalPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.amber,
+        backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.black),
         onPressed: () async {
           final result = await Navigator.push(
@@ -98,80 +103,55 @@ class _JadwalPageState extends State<JadwalPage> {
           if (result == true) _refreshData();
         },
       ),
-      // 1. TEMA GELAP
-      backgroundColor: const Color(0xFF111827),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
           "Jadwal Kuliah",
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.textPrimary),
         ),
-        backgroundColor: const Color(0xFF1F2937),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
         elevation: 0,
       ),
-
       body: RefreshIndicator(
         onRefresh: _refreshData,
-        color: Colors.amber,
-        backgroundColor: const Color(0xFF1F2937),
-        child: FutureBuilder<List<dynamic>>(
+        color: AppColors.primary,
+        backgroundColor: AppColors.surface,
+        child: FutureBuilder<List<Jadwal>>(
           future: _jadwalFuture,
           builder: (context, snapshot) {
-            // KONDISI 1: Jika loading
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
-                child: CircularProgressIndicator(color: Colors.amber),
+                child: CircularProgressIndicator(color: AppColors.primary),
               );
             }
-
-            // KONDISI 2: Jika API error / gagal nyambung
             if (snapshot.hasError) {
               return Center(
                 child: Text(
                   "Error: ${snapshot.error}",
-                  style: const TextStyle(color: Colors.red),
+                  style: const TextStyle(color: AppColors.error),
                 ),
               );
             }
-
-            // KONDISI 3: Jika data kosong di database
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return const Center(
                 child: Text(
                   "Belum ada jadwal kuliah.",
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
               );
             }
 
-            // KONDISI 4: Jika DATA BERHASIL DIDAPAT!
             final jadwalList = snapshot.data!;
-            debugPrint("isi paket daru laravel: $jadwalList");
 
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: jadwalList.length,
               itemBuilder: (context, index) {
-                final item = jadwalList[index];
-                // Ambil id mata kuliah
-                final idJadwal = item['id'].toString();
-                // Ambil nama mata kuliah
-                final namaMatkul =
-                    item['mata_kuliah']?['nama_matkul'] ?? 'Mata Kuliah ?';
-                // Ambil nama dosen
-                final namaDosen = item['dosen']?['name'] ?? 'Dosen ?';
-                // Ambil nama semester
-                final namaSemester = item['semester']?['nama'] ?? 'Semester ?';
-                // Ambil nama ruangan
-                final namaRuangan = item['ruangan']?['nama'] ?? 'Ruangan ?';
-                // Ambil waktu dan hari
-                final hari = item['hari'] ?? '-';
-                final jam =
-                    "${item['jam_mulai'] ?? ''} - ${item['jam_selesai'] ?? ''}";
+                final jadwal = jadwalList[index];
 
-                // Tampilan per baris
                 return Card(
-                  color: const Color(0xFF1F2937), 
+                  color: AppColors.cardBackground,
                   margin: const EdgeInsets.only(bottom: 12),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -191,68 +171,63 @@ class _JadwalPageState extends State<JadwalPage> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                hari,
+                                jadwal.hari,
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.textPrimary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                            // Teks Semester
                             Text(
-                              namaSemester,
+                              jadwal.namaSemester,
                               style: const TextStyle(
-                                color: Colors.grey,
+                                color: AppColors.textSecondary,
                                 fontSize: 12,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 10),
-
-                        // Nama Mata Kuliah
                         Text(
-                          namaMatkul,
+                          jadwal.namaMatkul,
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 5),
-
-                        // Jam & Ruangan
                         Row(
                           children: [
                             const Icon(
                               Icons.access_time,
-                              color: Colors.amber,
+                              color: AppColors.primary,
                               size: 16,
                             ),
                             const SizedBox(width: 5),
                             Text(
-                              jam,
-                              style: const TextStyle(color: Colors.amber),
+                              jadwal.jamFormatted,
+                              style: const TextStyle(color: AppColors.primary),
                             ),
                             const SizedBox(width: 15),
                             const Icon(
                               Icons.room,
-                              color: Colors.grey,
+                              color: AppColors.textSecondary,
                               size: 16,
                             ),
                             const SizedBox(width: 5),
                             Text(
-                              namaRuangan,
-                              style: const TextStyle(color: Colors.grey),
+                              jadwal.namaRuangan,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ],
                         ),
-                        const Divider(color: Colors.grey, height: 20),
-                        // Nama Dosen
+                        const Divider(color: AppColors.divider, height: 20),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Icon dosen
                             Row(
                               children: [
                                 const Icon(
@@ -262,38 +237,57 @@ class _JadwalPageState extends State<JadwalPage> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  namaDosen,
-                                  style: const TextStyle(color: Colors.white),
+                                  jadwal.namaDosen,
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                  ),
                                 ),
                               ],
                             ),
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Tombol Edit 
                                 IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.blue),
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: AppColors.info,
+                                  ),
                                   onPressed: () async {
                                     final result = await Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => EditJadwalPage(jadwalData: item),
+                                        builder: (context) => EditJadwalPage(
+                                          jadwalData: {
+                                            'id': jadwal.id,
+                                            'mata_kuliah_id':
+                                                jadwal.mataKuliahId,
+                                            'dosen_id': jadwal.dosenId,
+                                            'semester_id': jadwal.semesterId,
+                                            'ruangan_id': jadwal.ruanganId,
+                                            'hari': jadwal.hari,
+                                            'jam_mulai': jadwal.jamMulai,
+                                            'jam_selesai': jadwal.jamSelesai,
+                                            'kuota': jadwal.kuota,
+                                          },
+                                        ),
                                       ),
                                     );
-                                    if (result == true) {
-                                      _refreshData();
-                                    }
+                                    if (result == true) _refreshData();
                                   },
                                 ),
-                                // Tombol Hapus 
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                  onPressed: () {
-                                    _confirmDelete(context, idJadwal, namaMatkul);
-                                  },
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: AppColors.error,
+                                  ),
+                                  onPressed: () => _confirmDelete(
+                                    context,
+                                    jadwal.id,
+                                    jadwal.namaMatkul,
+                                  ),
                                 ),
                               ],
-                            ),                            
+                            ),
                           ],
                         ),
                       ],

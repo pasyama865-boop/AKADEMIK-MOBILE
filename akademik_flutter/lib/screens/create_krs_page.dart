@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../models/mahasiswa.dart';
+import '../models/jadwal.dart';
 import '../services/krs_service.dart';
 import '../services/mahasiswa_service.dart';
 import '../services/jadwal_service.dart';
@@ -17,8 +20,8 @@ class _CreateKrsPageState extends State<CreateKrsPage> {
   String? _selectedMahasiswa;
   String? _selectedJadwal;
 
-  List<dynamic> _mahasiswaList = [];
-  List<dynamic> _jadwalList = [];
+  List<Mahasiswa> _mahasiswaList = [];
+  List<Jadwal> _jadwalList = [];
 
   bool _isLoadingData = true;
   bool _isSaving = false;
@@ -36,8 +39,8 @@ class _CreateKrsPageState extends State<CreateKrsPage> {
         JadwalService().getJadwal(),
       ]);
       setState(() {
-        _mahasiswaList = results[0];
-        _jadwalList = results[1];
+        _mahasiswaList = results[0] as List<Mahasiswa>;
+        _jadwalList = results[1] as List<Jadwal>;
         _isLoadingData = false;
       });
     } catch (e) {
@@ -46,119 +49,120 @@ class _CreateKrsPageState extends State<CreateKrsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Gagal memuat data'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
     }
   }
 
-  // --- BAGIAN YANG DIPERBAIKI (ASYNC GAP & ARGUMEN) ---
   Future<void> _submitData() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
-
     try {
-      // 1. Panggil Service (Pastikan Service sudah menerima 2 argumen seperti langkah 1 di atas)
       await _krsService.createKrs(_selectedMahasiswa!, _selectedJadwal!);
-
-      // 2. PENJAGA PINTU (Fix Async Gap)
-      // Wajib dicek: Apakah halaman ini masih aktif setelah menunggu server?
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('KRS berhasil ditambahkan!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
-      // 3. PENJAGA PINTU ERROR (Fix Async Gap)
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString().replaceAll('Exception: ', '')),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
-      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
   }
-  // ----------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111827),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Input KRS", style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF1F2937),
+        title: const Text(
+          "Input KRS",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
       body: _isLoadingData
-          ? const Center(child: CircularProgressIndicator(color: Colors.amber))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : Form(
               key: _formKey,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   DropdownButtonFormField<String>(
-                    initialValue:
-                        _selectedMahasiswa, // Tetap gunakan value untuk kontrol state
+                    initialValue: _selectedMahasiswa,
                     items: _mahasiswaList
                         .map(
                           (m) => DropdownMenuItem(
-                            value: m['id'].toString(),
+                            value: m.id,
                             child: Text(
-                              "${m['nim']} - ${m['user']?['name'] ?? ''}",
+                              "${m.nim} - ${m.namaUser}",
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         )
                         .toList(),
                     onChanged: (v) => setState(() => _selectedMahasiswa = v),
-                    dropdownColor: const Color(0xFF1F2937),
-                    style: const TextStyle(color: Colors.white),
-                    isExpanded:
-                        true, // Tambahkan ini agar teks panjang tidak error
+                    dropdownColor: AppColors.surface,
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    isExpanded: true,
                     decoration: InputDecoration(
                       labelText: "Pilih Mahasiswa",
-                      labelStyle: const TextStyle(color: Colors.grey),
+                      labelStyle: const TextStyle(
+                        color: AppColors.textSecondary,
+                      ),
                       filled: true,
-                      fillColor: const Color(0xFF1F2937),
+                      fillColor: AppColors.surface,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
                       ),
                     ),
                     validator: (v) => v == null ? 'Wajib pilih' : null,
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    initialValue: _selectedJadwal, // Tetap gunakan value
+                    initialValue: _selectedJadwal,
                     isExpanded: true,
                     items: _jadwalList
                         .map(
                           (j) => DropdownMenuItem(
-                            value: j['id'].toString(),
+                            value: j.id,
                             child: Text(
-                              "${j['mata_kuliah']?['nama_matkul']} | ${j['hari']} ${j['jam_mulai']?.substring(0, 5) ?? ''}",
+                              "${j.namaMatkul} | ${j.hari} ${j.jamFormatted}",
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         )
                         .toList(),
                     onChanged: (v) => setState(() => _selectedJadwal = v),
-                    dropdownColor: const Color(0xFF1F2937),
-                    style: const TextStyle(color: Colors.white),
+                    dropdownColor: AppColors.surface,
+                    style: const TextStyle(color: AppColors.textPrimary),
                     decoration: InputDecoration(
                       labelText: "Pilih Jadwal",
-                      labelStyle: const TextStyle(color: Colors.grey),
+                      labelStyle: const TextStyle(
+                        color: AppColors.textSecondary,
+                      ),
                       filled: true,
-                      fillColor: const Color(0xFF1F2937),
+                      fillColor: AppColors.surface,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
                       ),
                     ),
                     validator: (v) => v == null ? 'Wajib pilih' : null,
@@ -166,7 +170,7 @@ class _CreateKrsPageState extends State<CreateKrsPage> {
                   const SizedBox(height: 30),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
+                      backgroundColor: AppColors.primary,
                       minimumSize: const Size(double.infinity, 50),
                     ),
                     onPressed: _isSaving ? null : _submitData,

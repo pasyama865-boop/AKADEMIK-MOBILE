@@ -1,6 +1,6 @@
-import 'jadwal_page.dart';
-import 'package:akademik_flutter/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login.dart';
 import 'dosen_page.dart';
@@ -10,6 +10,7 @@ import 'matakuliah_page.dart';
 import 'ruangan_page.dart';
 import 'semester_page.dart';
 import 'user_page.dart';
+import 'jadwal_page.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -37,14 +38,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        _adminName = prefs.getString('name') ?? "pasha";
+        _adminName = prefs.getString('name') ?? "Admin";
       });
     }
     try {
       final auth = AuthService();
       final stats = await auth.getAdminStats();
-      debugPrint("Isi kotak dari laravel: $stats");
-
       if (mounted) {
         setState(() {
           _totalMahasiswa = stats['total_mahasiswa'].toString();
@@ -57,9 +56,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: $e"),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     }
   }
@@ -67,28 +69,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111827),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Dashboard", style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF1F2937),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          "Dashboard",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
         elevation: 0,
       ),
-
-      // 1. SIDEBAR FILAMENT
-      drawer: _buildFilamentSidebar(context),
-
+      drawer: _buildSidebar(context),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 2. WELCOME
             _buildWelcomeWidget(),
-
             const SizedBox(height: 20),
-
-            // 3. STATS
             _buildStatCards(),
           ],
         ),
@@ -96,139 +94,138 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  //  KOMPONEN SIDEBAR
-  Widget _buildFilamentSidebar(BuildContext context) {
+  Widget _buildSidebar(BuildContext context) {
     return Drawer(
-      backgroundColor: const Color(0xFF1F2937),
+      backgroundColor: AppColors.surface,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: const BoxDecoration(color: Color(0xFF111827)),
+            decoration: const BoxDecoration(color: AppColors.background),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
-                  "Laravel",
+                  "Akademik",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(_adminName, style: const TextStyle(color: Colors.grey)),
+                Text(
+                  _adminName,
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
               ],
             ),
           ),
-
-          _navItem(Icons.dashboard, "Dashboard", Colors.amber, isActive: true),
+          _navItem(Icons.dashboard, "Dashboard", isActive: true),
           _navItem(
             Icons.people_outline,
             "Dosen",
-            Colors.grey,
             onTap: () {
+              Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const DosenPage()),
+                MaterialPageRoute(builder: (_) => const DosenPage()),
               );
             },
           ),
           _navItem(
             Icons.calendar_today,
             "Jadwal Kuliah",
-            Colors.grey,
             onTap: () {
+              Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const JadwalPage()),
+                MaterialPageRoute(builder: (_) => const JadwalPage()),
               );
             },
           ),
           _navItem(
             Icons.assignment_ind,
             "KRS Mahasiswa",
-            Colors.grey,
             onTap: () {
+              Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const KrsPage()),
+                MaterialPageRoute(builder: (_) => const KrsPage()),
               );
             },
           ),
           _navItem(
             Icons.school,
             "Mahasiswa",
-            Colors.grey,
             onTap: () {
+              Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const MahasiswaPage()),
+                MaterialPageRoute(builder: (_) => const MahasiswaPage()),
               );
             },
           ),
           _navItem(
             Icons.book,
             "Mata Kuliah",
-            Colors.grey,
             onTap: () {
+              Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const MataKuliahPage()),
+                MaterialPageRoute(builder: (_) => const MataKuliahPage()),
               );
             },
           ),
           _navItem(
             Icons.room,
             "Ruangan",
-            Colors.grey,
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const RuanganPage()),
+                MaterialPageRoute(builder: (_) => const RuanganPage()),
               );
             },
           ),
           _navItem(
             Icons.event,
             "Semester",
-            Colors.grey,
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SemesterPage()),
+                MaterialPageRoute(builder: (_) => const SemesterPage()),
               );
             },
           ),
           _navItem(
             Icons.admin_panel_settings,
             "Admin",
-            Colors.grey,
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const UserPage()),
+                MaterialPageRoute(builder: (_) => const UserPage()),
               );
             },
           ),
-
-          const Divider(color: Colors.grey),
+          const Divider(color: AppColors.divider),
           ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
+            leading: const Icon(Icons.logout, color: AppColors.error),
             title: const Text(
               "Sign out",
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: AppColors.textPrimary),
             ),
             onTap: () async {
+              final authService = AuthService();
+              await authService.logout();
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
               if (!context.mounted) return;
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
               );
             },
           ),
@@ -237,22 +234,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  // Fungsi pembantu untuk item menu samping
   Widget _navItem(
     IconData icon,
-    String title,
-    Color color, {
+    String title, {
     bool isActive = false,
     VoidCallback? onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: isActive ? Colors.amber : Colors.grey),
+      leading: Icon(
+        icon,
+        color: isActive ? AppColors.primary : AppColors.textSecondary,
+      ),
       title: Text(
         title,
-        style: TextStyle(color: isActive ? Colors.amber : Colors.white),
+        style: TextStyle(
+          color: isActive ? AppColors.primary : AppColors.textPrimary,
+        ),
       ),
       tileColor: isActive
-          ? Colors.amber.withValues(alpha: 0.1)
+          ? AppColors.primary.withValues(alpha: 0.1)
           : Colors.transparent,
       onTap: onTap,
     );
@@ -263,36 +263,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2937),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.divider.withValues(alpha: 0.2)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
+          CircleAvatar(
+            backgroundColor: Colors.grey[800],
+            child: Text(
+              _adminName[0].toUpperCase(),
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
+          ),
+          const SizedBox(width: 15),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                backgroundColor: Colors.grey[800],
-                child: Text(_adminName[0].toUpperCase()),
+              const Text(
+                "Welcome",
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
               ),
-              const SizedBox(width: 15),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Welcome",
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                  Text(
-                    _adminName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+              Text(
+                _adminName,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -309,33 +307,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       children: [
-        _statCards("Mahasiswa", _totalMahasiswa, Icons.school, Colors.blue),
-        _statCards("Dosen", _totalDosen, Icons.people_outline, Colors.orange),
-        _statCards("Mata Kuliah", _totalMataKuliah, Icons.book, Colors.green),
-        _statCards(
+        _statCard("Mahasiswa", _totalMahasiswa, Icons.school, Colors.blue),
+        _statCard("Dosen", _totalDosen, Icons.people_outline, Colors.orange),
+        _statCard("Mata Kuliah", _totalMataKuliah, Icons.book, Colors.green),
+        _statCard(
           "Jadwal Kuliah",
           _totalJadwal,
           Icons.calendar_today,
           Colors.purple,
         ),
-        _statCards("Ruangan", _totalRuangan, Icons.room, Colors.red),
-        _statCards("Semester", _totalSemester, Icons.event, Colors.teal),
+        _statCard("Ruangan", _totalRuangan, Icons.room, Colors.red),
+        _statCard("Semester", _totalSemester, Icons.event, Colors.teal),
       ],
     );
   }
 
-  Widget _statCards(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color iconColor,
-  ) {
+  Widget _statCard(String title, String value, IconData icon, Color iconColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2937),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.divider.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,7 +340,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -356,9 +352,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
           const SizedBox(height: 10),
           Text(
-            subtitle,
+            value,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.textPrimary,
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),

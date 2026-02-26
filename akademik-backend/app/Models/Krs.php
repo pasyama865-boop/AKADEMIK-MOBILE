@@ -2,10 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
+/**
+ * Model KRS (Kartu Rencana Studi).
+ * Merepresentasikan pengambilan jadwal kuliah oleh mahasiswa.
+ */
 class Krs extends Model
 {
     use HasFactory, HasUuids;
@@ -13,18 +17,25 @@ class Krs extends Model
     protected $table = 'krs';
 
     protected $fillable = [
-        'mahasiswa_id', 'jadwal_id', 'status', 'nilai_akhir'
+        'mahasiswa_id',
+        'jadwal_id',
+        'status',
+        'nilai_akhir',
     ];
 
-    // Relasi ke Jadwal
+    /**
+     * Relasi: Satu KRS dimiliki oleh satu jadwal.
+     */
     public function jadwal()
     {
         return $this->belongsTo(Jadwal::class, 'jadwal_id');
     }
 
-    // Relasi ke User Mahasiswa
+    /**
+     * Relasi: Satu KRS dimiliki oleh satu mahasiswa.
+     */
     public function mahasiswa()
-{
-    return $this->belongsTo(Mahasiswa::class, 'mahasiswa_id');
-}
+    {
+        return $this->belongsTo(Mahasiswa::class, 'mahasiswa_id');
+    }
 }

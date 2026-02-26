@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../models/mata_kuliah.dart';
+import '../models/dosen.dart';
+import '../models/ruangan.dart';
+import '../models/semester.dart';
 import '../services/jadwal_service.dart';
 import '../services/matakuliah_service.dart';
 import '../services/dosen_service.dart';
@@ -6,9 +11,7 @@ import '../services/ruangan_service.dart';
 import '../services/semester_service.dart';
 
 class EditJadwalPage extends StatefulWidget {
-  // WAJIB: Menerima data jadwal yang mau diedit dari halaman sebelumnya
   final Map<String, dynamic> jadwalData;
-
   const EditJadwalPage({super.key, required this.jadwalData});
 
   @override
@@ -18,7 +21,6 @@ class EditJadwalPage extends StatefulWidget {
 class _EditJadwalPageState extends State<EditJadwalPage> {
   final _formKey = GlobalKey<FormState>();
   final JadwalService _jadwalService = JadwalService();
-
   final _kuotaController = TextEditingController();
   final _jamMulaiController = TextEditingController();
   final _jamSelesaiController = TextEditingController();
@@ -29,39 +31,46 @@ class _EditJadwalPageState extends State<EditJadwalPage> {
   String? _selectedSemester;
   String? _selectedHari;
 
-  List<dynamic> _matkulList = [];
-  List<dynamic> _dosenList = [];
-  List<dynamic> _ruanganList = [];
-  List<dynamic> _semesterList = [];
-  
-  bool _isLoadingData = true; 
-  bool _isSaving = false;     
+  List<MataKuliah> _matkulList = [];
+  List<Dosen> _dosenList = [];
+  List<Ruangan> _ruanganList = [];
+  List<Semester> _semesterList = [];
 
-  final List<String> _hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  bool _isLoadingData = true;
+  bool _isSaving = false;
+
+  final List<String> _hariList = [
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _setInitialData(); // Masukkan data lama ke variabel
-    _loadDropdownData(); // Ambil daftar pilihan dari API
+    _setInitialData();
+    _loadDropdownData();
   }
 
-  // FUNGSI UNTUK MENGISI DATA LAMA (PRE-FILLED)
   void _setInitialData() {
     final jadwal = widget.jadwalData;
-    
     _selectedMatkul = jadwal['mata_kuliah_id']?.toString();
     _selectedDosen = jadwal['dosen_id']?.toString();
     _selectedRuangan = jadwal['ruangan_id']?.toString();
     _selectedSemester = jadwal['semester_id']?.toString();
     _selectedHari = jadwal['hari'];
     _kuotaController.text = jadwal['kuota']?.toString() ?? '';
-
-    final jamMulaiMentah = jadwal['jam_mulai']?.toString() ?? '';
-    _jamMulaiController.text = jamMulaiMentah.length >= 5 ? jamMulaiMentah.substring(0, 5) : jamMulaiMentah;
-
-    final jamSelesaiMentah = jadwal['jam_selesai']?.toString() ?? '';
-    _jamSelesaiController.text = jamSelesaiMentah.length >= 5 ? jamSelesaiMentah.substring(0, 5) : jamSelesaiMentah;
+    final jamMulai = jadwal['jam_mulai']?.toString() ?? '';
+    _jamMulaiController.text = jamMulai.length >= 5
+        ? jamMulai.substring(0, 5)
+        : jamMulai;
+    final jamSelesai = jadwal['jam_selesai']?.toString() ?? '';
+    _jamSelesaiController.text = jamSelesai.length >= 5
+        ? jamSelesai.substring(0, 5)
+        : jamSelesai;
   }
 
   Future<void> _loadDropdownData() async {
@@ -72,40 +81,48 @@ class _EditJadwalPageState extends State<EditJadwalPage> {
         RuanganService().getRuanganList(),
         SemesterService().getSemesterList(),
       ]);
-
       setState(() {
-        _matkulList = results[0];
-        _dosenList = results[1];
-        _ruanganList = results[2];
-        _semesterList = results[3];
+        _matkulList = results[0] as List<MataKuliah>;
+        _dosenList = results[1] as List<Dosen>;
+        _ruanganList = results[2] as List<Ruangan>;
+        _semesterList = results[3] as List<Semester>;
         _isLoadingData = false;
       });
     } catch (e) {
       setState(() => _isLoadingData = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal memuat data pilihan'), backgroundColor: Colors.red));
-      }
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal memuat data pilihan'),
+            backgroundColor: AppColors.error,
+          ),
+        );
     }
   }
 
-  Future<void> _selectTime(BuildContext context, TextEditingController controller) async {
+  Future<void> _selectTime(
+    BuildContext context,
+    TextEditingController controller,
+  ) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(primary: Colors.amber, onPrimary: Colors.black, surface: Color(0xFF1F2937), onSurface: Colors.white),
+      builder: (context, child) => Theme(
+        data: ThemeData.dark().copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: AppColors.info,
+            onPrimary: Colors.white,
+            surface: AppColors.surface,
+            onSurface: AppColors.textPrimary,
           ),
-          child: child!,
-        );
-      },
+        ),
+        child: child!,
+      ),
     );
     if (picked != null) {
       setState(() {
-        final jam = picked.hour.toString().padLeft(2, '0');
-        final menit = picked.minute.toString().padLeft(2, '0');
-        controller.text = "$jam:$menit";
+        controller.text =
+            "${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}";
       });
     }
   }
@@ -113,11 +130,8 @@ class _EditJadwalPageState extends State<EditJadwalPage> {
   Future<void> _submitData() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
-
     try {
-      final idJadwal = widget.jadwalData['id'].toString(); // Ambil ID Jadwal yang mau diedit
-      
-      await _jadwalService.updateJadwal(idJadwal, {
+      await _jadwalService.updateJadwal(widget.jadwalData['id'].toString(), {
         'mata_kuliah_id': _selectedMatkul,
         'dosen_id': _selectedDosen,
         'ruangan_id': _selectedRuangan,
@@ -127,22 +141,23 @@ class _EditJadwalPageState extends State<EditJadwalPage> {
         'jam_selesai': _jamSelesaiController.text,
         'kuota': _kuotaController.text,
       });
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Jadwal berhasil ditambahkan!'),
-            backgroundColor: Colors.green,
+            content: Text('Jadwal berhasil diupdate!'),
+            backgroundColor: AppColors.success,
           ),
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
         );
-      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -151,120 +166,202 @@ class _EditJadwalPageState extends State<EditJadwalPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111827),
-      appBar: AppBar(title: const Text("Edit Jadwal", style: TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF1F2937)),
-      body: _isLoadingData 
-        ? const Center(child: CircularProgressIndicator(color: Colors.blue)) // Warna loading biru untuk edit
-        : Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                const Text("PILIH DATA UTAMA", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                
-                _buildDropdown(
-                  label: "Mata Kuliah",
-                  value: _selectedMatkul,
-                  items: _matkulList.map((item) => DropdownMenuItem<String>(
-                    value: item['id'].toString(), 
-                    child: Text("${item['kode_matkul']} - ${item['nama_matkul']}", overflow: TextOverflow.ellipsis),
-                  )).toList(),
-                  onChanged: (val) => setState(() => _selectedMatkul = val),
-                ),
-
-                _buildDropdown(
-                  label: "Dosen Pengajar",
-                  value: _selectedDosen,
-                  items: _dosenList.map((item) => DropdownMenuItem<String>(
-                    value: item['user_id'].toString(), 
-                    child: Text(item['user']?['name'] ?? 'Tanpa Nama', overflow: TextOverflow.ellipsis),
-                  )).toList(),
-                  onChanged: (val) => setState(() => _selectedDosen = val),
-                ),
-
-                _buildDropdown(
-                  label: "Semester",
-                  value: _selectedSemester,
-                  items: _semesterList.map((item) => DropdownMenuItem<String>(
-                    value: item['id'].toString(), 
-                    child: Text(item['nama'] ?? 'Tanpa Nama', overflow: TextOverflow.ellipsis),
-                  )).toList(),
-                  onChanged: (val) => setState(() => _selectedSemester = val),
-                ),
-
-                _buildDropdown(
-                  label: "Ruangan",
-                  value: _selectedRuangan,
-                  items: _ruanganList.map((item) => DropdownMenuItem<String>(
-                    value: item['id'].toString(), 
-                    child: Text("${item['nama']} (${item['gedung'] ?? '-'})", overflow: TextOverflow.ellipsis),
-                  )).toList(),
-                  onChanged: (val) => setState(() => _selectedRuangan = val),
-                ),
-
-                const Divider(color: Colors.grey, height: 30),
-                const Text("WAKTU & KUOTA", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-
-                _buildDropdown(
-                  label: "Hari",
-                  value: _selectedHari,
-                  items: _hariList.map((hari) => DropdownMenuItem<String>(value: hari, child: Text(hari))).toList(),
-                  onChanged: (val) => setState(() => _selectedHari = val),
-                ),
-
-                Row(
-                  children: [
-                    Expanded(child: _buildTimeInput("Jam Mulai", _jamMulaiController)),
-                    const SizedBox(width: 16),
-                    Expanded(child: _buildTimeInput("Jam Selesai", _jamSelesaiController)),
-                  ],
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: TextFormField(
-                    controller: _kuotaController,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: "Kuota Mahasiswa", labelStyle: const TextStyle(color: Colors.grey),
-                      filled: true, fillColor: const Color(0xFF1F2937),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text(
+          "Edit Jadwal",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        backgroundColor: AppColors.surface,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
+      body: _isLoadingData
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.info),
+            )
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  const Text(
+                    "PILIH DATA UTAMA",
+                    style: TextStyle(
+                      color: AppColors.info,
+                      fontWeight: FontWeight.bold,
                     ),
-                    validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
                   ),
-                ),
-
-                const SizedBox(height: 20),
-                
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, minimumSize: const Size(double.infinity, 50)),
-                  onPressed: _isSaving ? null : _submitData,
-                  child: _isSaving 
-                    ? const CircularProgressIndicator(color: Colors.white) 
-                    : const Text("Update Jadwal", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                )
-              ],
+                  const SizedBox(height: 10),
+                  _buildDropdown(
+                    label: "Mata Kuliah",
+                    value: _selectedMatkul,
+                    items: _matkulList
+                        .map(
+                          (mk) => DropdownMenuItem<String>(
+                            value: mk.id,
+                            child: Text(
+                              "${mk.kodeMatkul} - ${mk.namaMatkul}",
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) => setState(() => _selectedMatkul = val),
+                  ),
+                  _buildDropdown(
+                    label: "Dosen Pengajar",
+                    value: _selectedDosen,
+                    items: _dosenList
+                        .map(
+                          (d) => DropdownMenuItem<String>(
+                            value: d.userId,
+                            child: Text(
+                              d.namaLengkap,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) => setState(() => _selectedDosen = val),
+                  ),
+                  _buildDropdown(
+                    label: "Semester",
+                    value: _selectedSemester,
+                    items: _semesterList
+                        .map(
+                          (s) => DropdownMenuItem<String>(
+                            value: s.id,
+                            child: Text(
+                              s.namaSemester,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) => setState(() => _selectedSemester = val),
+                  ),
+                  _buildDropdown(
+                    label: "Ruangan",
+                    value: _selectedRuangan,
+                    items: _ruanganList
+                        .map(
+                          (r) => DropdownMenuItem<String>(
+                            value: r.id,
+                            child: Text(
+                              "${r.nama} (${r.gedung ?? '-'})",
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) => setState(() => _selectedRuangan = val),
+                  ),
+                  const Divider(color: AppColors.divider, height: 30),
+                  const Text(
+                    "WAKTU & KUOTA",
+                    style: TextStyle(
+                      color: AppColors.info,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildDropdown(
+                    label: "Hari",
+                    value: _selectedHari,
+                    items: _hariList
+                        .map(
+                          (h) => DropdownMenuItem<String>(
+                            value: h,
+                            child: Text(h),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) => setState(() => _selectedHari = val),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTimeInput(
+                          "Jam Mulai",
+                          _jamMulaiController,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildTimeInput(
+                          "Jam Selesai",
+                          _jamSelesaiController,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: TextFormField(
+                      controller: _kuotaController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: AppColors.textPrimary),
+                      decoration: InputDecoration(
+                        labelText: "Kuota Mahasiswa",
+                        labelStyle: const TextStyle(
+                          color: AppColors.textSecondary,
+                        ),
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.info,
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    onPressed: _isSaving ? null : _submitData,
+                    child: _isSaving
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            "Update Jadwal",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
             ),
-          ),
     );
   }
 
-  Widget _buildDropdown({required String label, required String? value, required List<DropdownMenuItem<String>> items, required Function(String?) onChanged}) {
+  Widget _buildDropdown({
+    required String label,
+    required String? value,
+    required List<DropdownMenuItem<String>> items,
+    required Function(String?) onChanged,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: DropdownButtonFormField<String>(
         initialValue: value,
         items: items,
         onChanged: onChanged,
-        dropdownColor: const Color(0xFF1F2937),
-        style: const TextStyle(color: Colors.white),
+        dropdownColor: AppColors.surface,
+        style: const TextStyle(color: AppColors.textPrimary),
         decoration: InputDecoration(
-          labelText: label, labelStyle: const TextStyle(color: Colors.grey),
-          filled: true, fillColor: const Color(0xFF1F2937),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+          labelText: label,
+          labelStyle: const TextStyle(color: AppColors.textSecondary),
+          filled: true,
+          fillColor: AppColors.surface,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
         ),
         validator: (v) => v == null ? 'Silakan pilih $label' : null,
       ),
@@ -278,12 +375,17 @@ class _EditJadwalPageState extends State<EditJadwalPage> {
         controller: controller,
         readOnly: true,
         onTap: () => _selectTime(context, controller),
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: AppColors.textPrimary),
         decoration: InputDecoration(
-          labelText: label, labelStyle: const TextStyle(color: Colors.grey),
-          filled: true, fillColor: const Color(0xFF1F2937),
-          suffixIcon: const Icon(Icons.access_time, color: Colors.amber), // Biarkan icon tetap amber agar selaras dengan desain
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+          labelText: label,
+          labelStyle: const TextStyle(color: AppColors.textSecondary),
+          filled: true,
+          fillColor: AppColors.surface,
+          suffixIcon: const Icon(Icons.access_time, color: AppColors.info),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
         ),
         validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
       ),
