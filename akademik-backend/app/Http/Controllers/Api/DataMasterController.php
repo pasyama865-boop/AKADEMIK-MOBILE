@@ -33,7 +33,9 @@ class DataMasterController extends Controller
                 (SELECT COUNT(*) FROM jadwals) as total_jadwal,
                 (SELECT COUNT(*) FROM mata_kuliahs) as total_matakuliah,
                 (SELECT COUNT(*) FROM ruangans) as total_ruangan,
-                (SELECT COUNT(*) FROM semesters) as total_semester
+                (SELECT COUNT(*) FROM semesters) as total_semester,
+                (SELECT COUNT(*) FROM krs) as total_krs,
+                (SELECT COUNT(*) FROM users WHERE role = 'admin') as total_admin
         ");
 
         return response()->json((array) $stats);

@@ -3,42 +3,23 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 
-/// Service untuk menangani proses autentikasi pengguna.
-/// Meliputi login, logout, manajemen token, dan pengambilan data profil.
-///
-/// Menggunakan Singleton pattern agar hanya ada 1 instance
-/// dan SharedPreferences tidak di-load berulang-ulang.
+
 class AuthService {
-  // ============================================================
-  // SINGLETON PATTERN
-  // ============================================================
-
   static final AuthService _instance = AuthService._internal();
-
   /// Factory constructor mengembalikan instance yang sama.
   factory AuthService() => _instance;
-
   AuthService._internal();
-
   /// Cache SharedPreferences agar tidak dipanggil getInstance() berkali-kali.
   SharedPreferences? _prefs;
-
   /// URL dasar API dari config terpusat.
   final String baseUrl = ApiConfig.baseUrl;
-
-  /// Mengambil SharedPreferences (dengan caching).
+  /// Mengambil SharedPreferences dengan caching
   Future<SharedPreferences> get prefs async {
     _prefs ??= await SharedPreferences.getInstance();
     return _prefs!;
   }
 
-  // ============================================================
   // AUTENTIKASI
-  // ============================================================
-
-  /// Melakukan proses login dengan email dan password.
-  /// Menyimpan token, role, dan nama ke SharedPreferences jika berhasil.
-  /// Mengembalikan `true` jika login berhasil.
   Future<bool> login(String email, String password) async {
     final url = Uri.parse('$baseUrl/login');
 
@@ -90,7 +71,6 @@ class AuthService {
         );
       } catch (e) {
         // Abaikan error saat logout ke server,
-        // token lokal tetap akan dihapus
       }
     }
 
@@ -98,9 +78,7 @@ class AuthService {
     await p.remove('auth_token');
   }
 
-  // ============================================================
   // MANAJEMEN TOKEN
-  // ============================================================
 
   /// Menyimpan token autentikasi ke penyimpanan lokal.
   Future<void> simpanToken(String token) async {
@@ -109,15 +87,12 @@ class AuthService {
   }
 
   /// Mengambil token autentikasi dari penyimpanan lokal.
-  /// Mengembalikan `null` jika token tidak ditemukan.
   Future<String?> getToken() async {
     final p = await prefs;
     return p.getString('auth_token');
   }
 
-  // ============================================================
   // DATA PROFIL & STATISTIK
-  // ============================================================
 
   /// Mengambil data profil user yang sedang login.
   Future<Map<String, dynamic>> getProfile() async {

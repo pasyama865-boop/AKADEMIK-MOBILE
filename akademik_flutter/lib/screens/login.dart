@@ -17,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
 
   void _handleLogin() async {
     setState(() => _isLoading = true);
@@ -108,6 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 40),
               TextField(
                 controller: _emailController,
+                obscureText: _isPasswordVisible,
                 style: const TextStyle(color: AppColors.textPrimary),
                 decoration: InputDecoration(
                   labelText: "Email",
@@ -124,13 +126,21 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: _passwordController,
-                obscureText: true,
+                obscureText: _isPasswordVisible,
                 style: const TextStyle(color: AppColors.textPrimary),
                 decoration: InputDecoration(
                   labelText: "Password",
                   labelStyle: const TextStyle(color: AppColors.textSecondary),
                   prefixIcon: const Icon(Icons.lock, color: AppColors.primary),
                   filled: true,
+                  suffixIcon: IconButton(
+                    icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: AppColors.textSecondary),
+                    onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                  ),
                   fillColor: AppColors.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
