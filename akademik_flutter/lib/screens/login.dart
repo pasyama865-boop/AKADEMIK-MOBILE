@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _handleLogin() async {
     setState(() => _isLoading = true);
+    
 
     try {
       final auth = AuthService();
@@ -103,13 +104,12 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                "Silakan masuk untuk melanjutkan",
+                "Silahkan Masuk",
                 style: TextStyle(color: AppColors.textSecondary),
               ),
               const SizedBox(height: 40),
               TextField(
                 controller: _emailController,
-                obscureText: _isPasswordVisible,
                 style: const TextStyle(color: AppColors.textPrimary),
                 decoration: InputDecoration(
                   labelText: "Email",
@@ -126,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: _passwordController,
-                obscureText: _isPasswordVisible,
+                obscureText: !_isPasswordVisible,
                 style: const TextStyle(color: AppColors.textPrimary),
                 decoration: InputDecoration(
                   labelText: "Password",
