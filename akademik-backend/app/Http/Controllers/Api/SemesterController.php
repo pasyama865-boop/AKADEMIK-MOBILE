@@ -31,10 +31,10 @@ class SemesterController extends Controller
     public function createSemester(Request $request)
     {
         $dataValid = $request->validate([
-            'nama_semester'   => 'required|string|max:255',
+            'nama'            => 'required|string|max:255',
             'tanggal_mulai'   => 'required|date',
             'tanggal_selesai' => 'required|date',
-            'is_active'       => 'required|boolean',
+            'is_active'       => 'boolean',
         ]);
 
         try {
@@ -69,10 +69,10 @@ class SemesterController extends Controller
         }
 
         $dataValid = $request->validate([
-            'nama_semester'   => 'required|string|max:255',
+            'nama'            => 'required|string|max:255',
             'tanggal_mulai'   => 'required|date',
             'tanggal_selesai' => 'required|date',
-            'is_active'       => 'required|boolean',
+            'is_active'       => 'boolean',
         ]);
 
         try {

@@ -90,13 +90,17 @@ class _DosenDashboardState extends State<DosenDashboard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Batal",
-                style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              "Batal",
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("Ya, Keluar",
-                style: TextStyle(color: AppColors.error)),
+            child: const Text(
+              "Ya, Keluar",
+              style: TextStyle(color: AppColors.error),
+            ),
           ),
         ],
       ),
@@ -125,12 +129,13 @@ class _DosenDashboardState extends State<DosenDashboard> {
   List<dynamic> get _jadwalHariIni {
     final hariIni = _namaHari[DateTime.now().weekday] ?? '';
     return _jadwalList
-        .where((j) =>
-            (j['hari'] ?? '').toString().toLowerCase() ==
-            hariIni.toLowerCase())
+        .where(
+          (j) =>
+              (j['hari'] ?? '').toString().toLowerCase() ==
+              hariIni.toLowerCase(),
+        )
         .toList()
-      ..sort((a, b) =>
-          (a['jam_mulai'] ?? '').compareTo(b['jam_mulai'] ?? ''));
+      ..sort((a, b) => (a['jam_mulai'] ?? '').compareTo(b['jam_mulai'] ?? ''));
   }
 
   /// Jadwal dikelompokkan per hari
@@ -139,13 +144,17 @@ class _DosenDashboardState extends State<DosenDashboard> {
     final urutan = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
     for (final hari in urutan) {
-      final items = _jadwalList
-          .where((j) =>
-              (j['hari'] ?? '').toString().toLowerCase() ==
-              hari.toLowerCase())
-          .toList()
-        ..sort((a, b) =>
-            (a['jam_mulai'] ?? '').compareTo(b['jam_mulai'] ?? ''));
+      final items =
+          _jadwalList
+              .where(
+                (j) =>
+                    (j['hari'] ?? '').toString().toLowerCase() ==
+                    hari.toLowerCase(),
+              )
+              .toList()
+            ..sort(
+              (a, b) => (a['jam_mulai'] ?? '').compareTo(b['jam_mulai'] ?? ''),
+            );
       if (items.isNotEmpty) {
         result[hari] = items;
       }
@@ -170,8 +179,10 @@ class _DosenDashboardState extends State<DosenDashboard> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline,
-                color: AppColors.textPrimary),
+            icon: const Icon(
+              Icons.person_outline,
+              color: AppColors.textPrimary,
+            ),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ProfileScreen()),
@@ -191,7 +202,8 @@ class _DosenDashboardState extends State<DosenDashboard> {
         backgroundColor: AppColors.surface,
         child: _isLoading
             ? const Center(
-                child: CircularProgressIndicator(color: AppColors.primary))
+                child: CircularProgressIndicator(color: AppColors.primary),
+              )
             : SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16.0),
@@ -273,10 +285,7 @@ class _DosenDashboardState extends State<DosenDashboard> {
                 const SizedBox(height: 6),
                 const Text(
                   'Selamat mengajar hari ini',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ],
             ),
@@ -287,11 +296,7 @@ class _DosenDashboardState extends State<DosenDashboard> {
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(
-              Icons.co_present,
-              color: Colors.white,
-              size: 32,
-            ),
+            child: const Icon(Icons.co_present, color: Colors.white, size: 32),
           ),
         ],
       ),
@@ -453,9 +458,7 @@ class _DosenDashboardState extends State<DosenDashboard> {
       );
     }
 
-    return Column(
-      children: jadwal.map((j) => _buildJadwalCard(j)).toList(),
-    );
+    return Column(children: jadwal.map((j) => _buildJadwalCard(j)).toList());
   }
 
   /// Semua jadwal dikelompokkan per hari
@@ -494,14 +497,16 @@ class _DosenDashboardState extends State<DosenDashboard> {
             // Day header
             Container(
               width: double.infinity,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
                 border: isToday
-                    ? Border.all(color: color.withValues(alpha: 0.5), width: 1.5)
+                    ? Border.all(
+                        color: color.withValues(alpha: 0.5),
+                        width: 1.5,
+                      )
                     : null,
               ),
               child: Row(
@@ -520,7 +525,9 @@ class _DosenDashboardState extends State<DosenDashboard> {
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 1),
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: color,
                         borderRadius: BorderRadius.circular(4),
@@ -569,8 +576,9 @@ class _DosenDashboardState extends State<DosenDashboard> {
     final peserta = jadwal['krs_count'] ?? 0;
 
     final jamStart = jamMulai.length >= 5 ? jamMulai.substring(0, 5) : jamMulai;
-    final jamEnd =
-        jamSelesai.length >= 5 ? jamSelesai.substring(0, 5) : jamSelesai;
+    final jamEnd = jamSelesai.length >= 5
+        ? jamSelesai.substring(0, 5)
+        : jamSelesai;
     final dayColor = _getColorForDay(hari);
 
     return Container(
@@ -579,16 +587,13 @@ class _DosenDashboardState extends State<DosenDashboard> {
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: dayColor.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: dayColor.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
           // Time column
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: dayColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
@@ -638,8 +643,11 @@ class _DosenDashboardState extends State<DosenDashboard> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.room,
-                        color: AppColors.textSecondary, size: 13),
+                    const Icon(
+                      Icons.room,
+                      color: AppColors.textSecondary,
+                      size: 13,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       namaRuangan,
@@ -652,7 +660,9 @@ class _DosenDashboardState extends State<DosenDashboard> {
                     // SKS badge
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 1),
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(6),
@@ -672,8 +682,11 @@ class _DosenDashboardState extends State<DosenDashboard> {
                 // Peserta bar
                 Row(
                   children: [
-                    const Icon(Icons.people,
-                        color: AppColors.textSecondary, size: 13),
+                    const Icon(
+                      Icons.people,
+                      color: AppColors.textSecondary,
+                      size: 13,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '$peserta / $kuota Mahasiswa',
@@ -688,8 +701,9 @@ class _DosenDashboardState extends State<DosenDashboard> {
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
                           value: kuota > 0 ? peserta / kuota : 0,
-                          backgroundColor:
-                              AppColors.textSecondary.withValues(alpha: 0.15),
+                          backgroundColor: AppColors.textSecondary.withValues(
+                            alpha: 0.15,
+                          ),
                           valueColor: AlwaysStoppedAnimation<Color>(
                             peserta >= kuota ? AppColors.error : dayColor,
                           ),

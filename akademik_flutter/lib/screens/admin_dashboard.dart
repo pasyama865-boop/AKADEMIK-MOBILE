@@ -6,7 +6,6 @@ import '../widgets/kartu_statistik.dart';
 import '../widgets/kartu_menu.dart';
 import '../widgets/loading_berkedip.dart';
 import 'dosen_page.dart';
-import 'mahasiswa_page.dart';
 import 'matakuliah_page.dart';
 import 'ruangan_page.dart';
 import 'semester_page.dart';
@@ -331,7 +330,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const MahasiswaPage(),
+                          builder: (_) => const MataKuliahPage(),
                         ),
                       ).then((_) => _loadAllData()),
                     ),
@@ -346,21 +345,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const DosenPage()),
-                      ).then((_) => _loadAllData()),
-                    ),
-                    const SizedBox(height: 12),
-                    MenuCard(
-                      title: "Mata Kuliah",
-                      icon: Icons.menu_book_rounded,
-                      color: Colors.orangeAccent,
-                      badge: _isLoading
-                          ? "..."
-                          : "${_getStatValue('total_matkul')} MK",
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const MataKuliahPage(),
-                        ),
                       ).then((_) => _loadAllData()),
                     ),
                     const SizedBox(height: 12),

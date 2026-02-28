@@ -16,7 +16,7 @@ class Semester {
   factory Semester.fromJson(Map<String, dynamic> json) {
     return Semester(
       id: json['id'].toString(),
-      namaSemester: json['nama_semester'] ?? '-',
+      namaSemester: json['nama'] ?? json['nama_semester'] ?? '-',
       tanggalMulai: json['tanggal_mulai'] ?? '-',
       tanggalSelesai: json['tanggal_selesai'] ?? '-',
       isActive: json['is_active'] == true || json['is_active'] == 1,

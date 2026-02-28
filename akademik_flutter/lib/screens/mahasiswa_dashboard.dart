@@ -135,7 +135,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   /// Cek apakah KRS sudah diisi
   bool get _krsStatus => _totalMatkul > 0;
 
-  /// Ambil KRS yang sudah memiliki nilai 
+  /// Ambil KRS yang sudah memiliki nilai
   List<Krs> get _krsWithNilai {
     return _krsList
         .where(
