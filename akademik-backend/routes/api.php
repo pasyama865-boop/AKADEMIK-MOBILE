@@ -13,21 +13,19 @@ use App\Http\Controllers\Api\SemesterController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-// ROUTE PUBLIK (Tanpa Autentikasi)
+// ROUTE PUBLIK 
 Route::post('/login', [AuthController::class, 'login']);
 
-// ROUTE TERLINDUNGI (Wajib Login / Token Sanctum)
+// ROUTE TERLINDUNGI 
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Autentikasi & Profil (semua role boleh akses)
+    // Autentikasi & Profil 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', function (Request $request) {
         return $request->user();
     });
 
-    // ============================================================
-    // ROUTE KHUSUS ADMIN (hanya role 'admin' yang boleh akses)
-    // ============================================================
+    // ROUTE KHUSUS ADMIN 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
 
         // Dashboard Admin - Statistik
@@ -82,11 +80,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('semester/{id}', [SemesterController::class, 'deleteSemester']);
     });
 
-    // ============================================================
-    // ROUTE UMUM (semua role yang sudah login boleh akses)
-    // ============================================================
+    // ROUTE KHUSUS DOSEN
+    Route::middleware('role:dosen')->prefix('dosen')->group(function () {
+        Route::get('jadwal', [DosenController::class, 'getMyJadwal']);
+        Route::get('stats', [DosenController::class, 'getMyStats']);
+    });
 
-    // Data Master (Dropdown / Referensi)
+    // ROUTE UMUM 
+
+    // Data Master 
     Route::get('/mata-kuliah', [DataMasterController::class, 'getMataKuliah']);
     Route::get('/ruangan', [DataMasterController::class, 'getRuangan']);
     Route::get('/semesters', [DataMasterController::class, 'getSemesters']);

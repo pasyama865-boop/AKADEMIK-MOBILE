@@ -6,14 +6,187 @@ use App\Http\Controllers\Controller;
 use App\Models\Jadwal;
 use App\Models\Krs;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Controller untuk mengelola data KRS (Kartu Rencana Studi).
  * Menyediakan operasi CRUD dengan validasi duplikat, kuota, dan bentrok jadwal.
+ *
+ * Terdapat dua kelompok method:
+ * 1. Method ADMIN: getKrsList, createKrs, updateKrs, deleteKrs
+ * 2. Method MAHASISWA: index, store, destroy
  */
 class KrsController extends Controller
 {
+    // ============================================================
+    // METHOD MAHASISWA (Akses melalui /krs)
+    // ============================================================
+
+    /**
+     * Mengambil daftar KRS milik mahasiswa yang sedang login.
+     * Menghitung total SKS yang sudah diambil.
+     */
+    public function index()
+    {
+        $user = Auth::user();
+        $mahasiswa = $user->mahasiswa;
+
+        if (!$mahasiswa) {
+            return response()->json([
+                'message' => 'Data mahasiswa tidak ditemukan untuk user ini.',
+            ], 404);
+        }
+
+        $daftarKrs = Krs::with([
+            'jadwal.mataKuliah',
+            'jadwal.dosen',
+            'jadwal.ruangan',
+            'jadwal.semester',
+        ])
+            ->where('mahasiswa_id', $mahasiswa->id)
+            ->latest()
+            ->get();
+
+        // Hitung total SKS dari semua KRS yang diambil
+        $totalSks = 0;
+        foreach ($daftarKrs as $krs) {
+            $totalSks += $krs->jadwal->mataKuliah->sks ?? 0;
+        }
+
+        return response()->json([
+            'message'    => 'Data KRS mahasiswa berhasil diambil',
+            'data'       => $daftarKrs,
+            'total_sks'  => $totalSks,
+            'mahasiswa'  => [
+                'id'   => $mahasiswa->id,
+                'nim'  => $mahasiswa->nim,
+                'nama' => $user->name,
+            ],
+        ]);
+    }
+
+    /**
+     * Mahasiswa mengambil jadwal kuliah (menambahkan KRS).
+     *
+     * Validasi:
+     * 1. Cek duplikat
+     * 2. Cek kuota kelas
+     * 3. Cek bentrok jadwal
+     * 4. Cek batas maksimal 24 SKS per semester
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'jadwal_id' => 'required|exists:jadwals,id',
+        ]);
+
+        $user = Auth::user();
+        $mahasiswa = $user->mahasiswa;
+
+        if (!$mahasiswa) {
+            return response()->json([
+                'message' => 'Data mahasiswa tidak ditemukan untuk user ini.',
+            ], 404);
+        }
+
+        $mahasiswaId = $mahasiswa->id;
+        $jadwalBaru  = Jadwal::with('mataKuliah', 'semester')->findOrFail($request->jadwal_id);
+
+        // Validasi 1: Cek duplikat pengambilan jadwal
+        $sudahMengambil = Krs::where('mahasiswa_id', $mahasiswaId)
+            ->where('jadwal_id', $jadwalBaru->id)
+            ->exists();
+
+        if ($sudahMengambil) {
+            return response()->json([
+                'message' => 'Kamu sudah mengambil mata kuliah ini.',
+            ], 400);
+        }
+
+        // Validasi 2: Cek ketersediaan kuota kelas
+        $jumlahPeserta = Krs::where('jadwal_id', $jadwalBaru->id)->count();
+
+        if ($jumlahPeserta >= $jadwalBaru->kuota) {
+            return response()->json([
+                'message' => 'Kelas penuh! Kuota sudah habis.',
+            ], 400);
+        }
+
+        // Validasi 3: Cek bentrok jadwal
+        $errorBentrok = $this->cekBentrokJadwal($mahasiswaId, $jadwalBaru);
+        if ($errorBentrok) {
+            return $errorBentrok;
+        }
+
+        // Validasi 4: Cek batas maksimal 24 SKS per semester
+        $totalSksSaatIni = Krs::where('mahasiswa_id', $mahasiswaId)
+            ->whereHas('jadwal', function ($q) use ($jadwalBaru) {
+                $q->where('semester_id', $jadwalBaru->semester_id);
+            })
+            ->with('jadwal.mataKuliah')
+            ->get()
+            ->sum(fn($krs) => $krs->jadwal->mataKuliah->sks ?? 0);
+
+        $sksBaru = $jadwalBaru->mataKuliah->sks ?? 0;
+
+        if (($totalSksSaatIni + $sksBaru) > 24) {
+            return response()->json([
+                'message' => 'Melebihi batas 24 SKS!',
+                'detail'  => "SKS saat ini: {$totalSksSaatIni}, mata kuliah ini: {$sksBaru} SKS. Total akan menjadi " . ($totalSksSaatIni + $sksBaru) . " SKS.",
+            ], 400);
+        }
+
+        // Simpan KRS baru
+        $krsBaru = DB::transaction(function () use ($mahasiswaId, $jadwalBaru) {
+            return Krs::create([
+                'mahasiswa_id' => $mahasiswaId,
+                'jadwal_id'    => $jadwalBaru->id,
+                'status'       => 'approved',
+            ]);
+        });
+
+        return response()->json([
+            'message' => 'Berhasil mengambil mata kuliah!',
+            'data'    => $krsBaru,
+        ], 201);
+    }
+
+    /**
+     * Mahasiswa membatalkan KRS miliknya sendiri.
+     */
+    public function destroy($id)
+    {
+        $user = Auth::user();
+        $mahasiswa = $user->mahasiswa;
+
+        if (!$mahasiswa) {
+            return response()->json([
+                'message' => 'Data mahasiswa tidak ditemukan.',
+            ], 404);
+        }
+
+        $krs = Krs::where('id', $id)
+            ->where('mahasiswa_id', $mahasiswa->id)
+            ->first();
+
+        if (!$krs) {
+            return response()->json([
+                'message' => 'Data KRS tidak ditemukan atau bukan milikmu.',
+            ], 404);
+        }
+
+        $krs->delete();
+
+        return response()->json([
+            'message' => 'Mata kuliah berhasil dibatalkan.',
+        ]);
+    }
+
+    // ============================================================
+    // METHOD ADMIN (Akses melalui /admin/krs)
+    // ============================================================
+
     /**
      * Mengambil seluruh daftar KRS beserta relasi terkait.
      * Data diurutkan berdasarkan yang terbaru.

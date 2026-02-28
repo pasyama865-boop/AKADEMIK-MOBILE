@@ -3,16 +3,19 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 
-
 class AuthService {
   static final AuthService _instance = AuthService._internal();
+
   /// Factory constructor mengembalikan instance yang sama.
   factory AuthService() => _instance;
   AuthService._internal();
+
   /// Cache SharedPreferences agar tidak dipanggil getInstance() berkali-kali.
   SharedPreferences? _prefs;
+
   /// URL dasar API dari config terpusat.
   final String baseUrl = ApiConfig.baseUrl;
+
   /// Mengambil SharedPreferences dengan caching
   Future<SharedPreferences> get prefs async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -41,6 +44,14 @@ class AuthService {
         await p.setString('role', data['user']['role']);
         await p.setString('name', data['user']['name']);
 
+        // Simpan mahasiswa_id jika role mahasiswa
+        if (data['user']['mahasiswa'] != null) {
+          await p.setString(
+            'mahasiswa_id',
+            data['user']['mahasiswa']['id'].toString(),
+          );
+        }
+
         return true;
       }
 
@@ -50,6 +61,12 @@ class AuthService {
     } catch (e) {
       throw Exception('Gagal terhubung ke server: $e');
     }
+  }
+
+  /// Mengambil mahasiswa_id dari penyimpanan lokal.
+  Future<String?> getMahasiswaId() async {
+    final p = await prefs;
+    return p.getString('mahasiswa_id');
   }
 
   /// Melakukan proses logout.

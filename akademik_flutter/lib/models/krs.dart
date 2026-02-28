@@ -11,9 +11,11 @@ class Krs {
   final String namaMatkul;
   final String namaDosen;
   final String namaRuangan;
+  final String namaSemester;
   final String hari;
   final String jamMulai;
   final String jamSelesai;
+  final int sks;
 
   Krs({
     required this.id,
@@ -26,9 +28,11 @@ class Krs {
     required this.namaMatkul,
     required this.namaDosen,
     required this.namaRuangan,
+    required this.namaSemester,
     required this.hari,
     required this.jamMulai,
     required this.jamSelesai,
+    this.sks = 0,
   });
 
   String get jamFormatted => '$jamMulai - $jamSelesai';
@@ -48,9 +52,11 @@ class Krs {
       namaMatkul: jadwal?['mata_kuliah']?['nama_matkul'] ?? 'Mata Kuliah ?',
       namaDosen: jadwal?['dosen']?['name'] ?? 'Dosen ?',
       namaRuangan: jadwal?['ruangan']?['nama'] ?? 'Ruangan ?',
+      namaSemester: jadwal?['semester']?['nama'] ?? 'Semester ?',
       hari: jadwal?['hari'] ?? '-',
       jamMulai: jadwal?['jam_mulai'] ?? '',
       jamSelesai: jadwal?['jam_selesai'] ?? '',
+      sks: int.tryParse(jadwal?['mata_kuliah']?['sks']?.toString() ?? '0') ?? 0,
     );
   }
 

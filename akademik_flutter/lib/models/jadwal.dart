@@ -8,6 +8,8 @@ class Jadwal {
   final String jamMulai;
   final String jamSelesai;
   final int kuota;
+  final int sks;
+  final int pesertaCount;
 
   // Data relasi (flatten)
   final String namaMatkul;
@@ -25,6 +27,8 @@ class Jadwal {
     required this.jamMulai,
     required this.jamSelesai,
     required this.kuota,
+    this.sks = 0,
+    this.pesertaCount = 0,
     required this.namaMatkul,
     required this.namaDosen,
     required this.namaSemester,
@@ -32,6 +36,8 @@ class Jadwal {
   });
 
   String get jamFormatted => '$jamMulai - $jamSelesai';
+
+  bool get isFull => pesertaCount >= kuota;
 
   factory Jadwal.fromJson(Map<String, dynamic> json) {
     return Jadwal(
@@ -44,6 +50,11 @@ class Jadwal {
       jamMulai: json['jam_mulai'] ?? '',
       jamSelesai: json['jam_selesai'] ?? '',
       kuota: int.tryParse(json['kuota']?.toString() ?? '0') ?? 0,
+      sks:
+          int.tryParse(json['sks']?.toString() ?? '0') ??
+          int.tryParse(json['mata_kuliah']?['sks']?.toString() ?? '0') ??
+          0,
+      pesertaCount: int.tryParse(json['peserta_count']?.toString() ?? '0') ?? 0,
       namaMatkul: json['mata_kuliah']?['nama_matkul'] ?? 'Mata Kuliah ?',
       namaDosen: json['dosen']?['name'] ?? 'Dosen ?',
       namaSemester: json['semester']?['nama'] ?? 'Semester ?',

@@ -59,4 +59,12 @@ class Jadwal extends Model
     {
         return $this->belongsTo(Semester::class, 'semester_id');
     }
+
+    /**
+     * Relasi: Satu jadwal bisa memiliki banyak KRS (peserta).
+     */
+    public function krs()
+    {
+        return $this->hasMany(Krs::class, 'jadwal_id');
+    }
 }

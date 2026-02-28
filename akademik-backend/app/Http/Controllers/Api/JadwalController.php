@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Jadwal;
+use App\Models\Krs;
 use Illuminate\Http\Request;
 
 /**
@@ -26,6 +27,38 @@ class JadwalController extends Controller
         'jam_selesai'    => 'required|date_format:H:i',
         'kuota'          => 'required|numeric',
     ];
+
+    // ============================================================
+    // METHOD PUBLIK (Semua role yang login bisa akses)
+    // ============================================================
+
+    /**
+     * Mengambil seluruh jadwal beserta relasi dan jumlah peserta.
+     * Digunakan oleh halaman KRS Mahasiswa untuk memilih jadwal.
+     */
+    public function index()
+    {
+        $daftarJadwal = Jadwal::with([
+            'mataKuliah',
+            'dosen',
+            'semester',
+            'ruangan',
+        ])->withCount(['krs as peserta_count'])->latest()->get();
+
+        // Tambahkan field sks dari relasi mataKuliah ke setiap jadwal
+        $daftarJadwal->each(function ($jadwal) {
+            $jadwal->sks = $jadwal->mataKuliah->sks ?? 0;
+        });
+
+        return response()->json([
+            'message' => 'Daftar jadwal kuliah tersedia',
+            'data'    => $daftarJadwal,
+        ]);
+    }
+
+    // ============================================================
+    // METHOD ADMIN (Akses melalui /admin/jadwal)
+    // ============================================================
 
     /**
      * Mengambil seluruh jadwal beserta relasi terkait.
