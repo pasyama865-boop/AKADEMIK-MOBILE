@@ -66,4 +66,27 @@ class AuthController extends Controller
             'message' => 'Logout berhasil',
         ]);
     }
+
+    /**
+     * Memperbarui token akses (Refresh Token).
+     *
+     * Menghapus token yang lama dan mengeluarkan token yang baru
+     * untuk memperpanjang sesi pengguna.
+     */
+    public function refresh(Request $request)
+    {
+        $user = $request->user();
+        
+        // Hapus token akses yang sedang digunakan
+        $user->currentAccessToken()->delete();
+
+        // Buat token baru dengan waktu kedaluwarsa baru (24 jam)
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message'      => 'Token berhasil diperbarui',
+            'access_token' => $token,
+            'token_type'   => 'Bearer',
+        ]);
+    }
 }

@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Controller untuk mengelola data master dan operasi CRUD dosen.
@@ -26,17 +27,19 @@ class DataMasterController extends Controller
      */
     public function getAdminStats()
     {
-        $stats = DB::selectOne("
-            SELECT
-                (SELECT COUNT(*) FROM mahasiswas) as total_mahasiswa,
-                (SELECT COUNT(*) FROM dosens) as total_dosen,
-                (SELECT COUNT(*) FROM jadwals) as total_jadwal,
-                (SELECT COUNT(*) FROM mata_kuliahs) as total_matakuliah,
-                (SELECT COUNT(*) FROM ruangans) as total_ruangan,
-                (SELECT COUNT(*) FROM semesters) as total_semester,
-                (SELECT COUNT(*) FROM krs) as total_krs,
-                (SELECT COUNT(*) FROM users WHERE role = 'admin') as total_admin
-        ");
+        $stats = Cache::remember('admin_stats', now()->addMinutes(10), function () {
+            return DB::selectOne("
+                SELECT
+                    (SELECT COUNT(*) FROM mahasiswas) as total_mahasiswa,
+                    (SELECT COUNT(*) FROM dosens) as total_dosen,
+                    (SELECT COUNT(*) FROM jadwals) as total_jadwal,
+                    (SELECT COUNT(*) FROM mata_kuliahs) as total_matakuliah,
+                    (SELECT COUNT(*) FROM ruangans) as total_ruangan,
+                    (SELECT COUNT(*) FROM semesters) as total_semester,
+                    (SELECT COUNT(*) FROM krs) as total_krs,
+                    (SELECT COUNT(*) FROM users WHERE role = 'admin') as total_admin
+            ");
+        });
 
         return response()->json((array) $stats);
     }

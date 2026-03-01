@@ -14,19 +14,20 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // ROUTE PUBLIK 
-Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('throttle:10,1')->post('/login', [AuthController::class, 'login']);
 
 // ROUTE TERLINDUNGI 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
     // Autentikasi & Profil 
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/refresh-token', [AuthController::class, 'refresh']);
     Route::get('/me', function (Request $request) {
         return $request->user();
     });
 
     // ROUTE KHUSUS ADMIN 
-    Route::middleware('role:admin')->prefix('admin')->group(function () {
+    Route::middleware(['role:admin', \App\Http\Middleware\AuditAdminAction::class])->prefix('admin')->group(function () {
 
         // Dashboard Admin - Statistik
         Route::get('stats', [DataMasterController::class, 'getAdminStats']);
@@ -84,6 +85,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:dosen')->prefix('dosen')->group(function () {
         Route::get('jadwal', [DosenController::class, 'getMyJadwal']);
         Route::get('stats', [DosenController::class, 'getMyStats']);
+        Route::get('mahasiswa', [DosenController::class, 'getMahasiswaBimbingan']);
+        Route::post('mahasiswa/{id}/approve-krs', [DosenController::class, 'approveKrsMahasiswa']);
     });
 
     // ROUTE UMUM 
@@ -96,6 +99,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Jadwal & KRS Mahasiswa
     Route::get('/jadwal', [JadwalController::class, 'index']);
     Route::get('/krs', [KrsController::class, 'index']);
-    Route::post('/krs', [KrsController::class, 'store']);
-    Route::delete('/krs/{id}', [KrsController::class, 'destroy']);
+    Route::post('/krs', [KrsController::class, 'store'])->middleware('throttle:30,1');
+    Route::delete('/krs/{id}', [KrsController::class, 'destroy'])->middleware('throttle:30,1');
 });

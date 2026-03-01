@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Model Mahasiswa.
@@ -12,10 +13,11 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Mahasiswa extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
 
     protected $fillable = [
         'user_id',
+        'dosen_id',
         'nim',
         'jurusan',
         'angkatan',
@@ -27,5 +29,13 @@ class Mahasiswa extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Relasi: Mahasiswa bisa memiliki satu dosen pembimbing akademik (Dosen Wali).
+     */
+    public function dosenWali()
+    {
+        return $this->belongsTo(Dosen::class, 'dosen_id');
     }
 }

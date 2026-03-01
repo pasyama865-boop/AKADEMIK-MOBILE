@@ -91,65 +91,82 @@ class KrsController extends Controller
         }
 
         $mahasiswaId = $mahasiswa->id;
-        $jadwalBaru  = Jadwal::with('mataKuliah', 'semester')->findOrFail($request->jadwal_id);
+        
+        DB::beginTransaction();
 
-        // Validasi 1: Cek duplikat pengambilan jadwal
-        $sudahMengambil = Krs::where('mahasiswa_id', $mahasiswaId)
-            ->where('jadwal_id', $jadwalBaru->id)
-            ->exists();
+        try {
+            $jadwalBaru  = Jadwal::with('mataKuliah', 'semester')
+                ->when(DB::getDriverName() !== 'sqlite', function ($q) {
+                    return $q->lockForUpdate();
+                })
+                ->findOrFail($request->jadwal_id);
 
-        if ($sudahMengambil) {
-            return response()->json([
-                'message' => 'Kamu sudah mengambil mata kuliah ini.',
-            ], 400);
-        }
+            // Validasi 1: Cek duplikat pengambilan jadwal
+            $sudahMengambil = Krs::where('mahasiswa_id', $mahasiswaId)
+                ->where('jadwal_id', $jadwalBaru->id)
+                ->exists();
 
-        // Validasi 2: Cek ketersediaan kuota kelas
-        $jumlahPeserta = Krs::where('jadwal_id', $jadwalBaru->id)->count();
+            if ($sudahMengambil) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Kamu sudah mengambil mata kuliah ini.',
+                ], 400);
+            }
 
-        if ($jumlahPeserta >= $jadwalBaru->kuota) {
-            return response()->json([
-                'message' => 'Kelas penuh! Kuota sudah habis.',
-            ], 400);
-        }
+            // Validasi 2: Cek ketersediaan kuota kelas
+            $jumlahPeserta = Krs::where('jadwal_id', $jadwalBaru->id)->count();
 
-        // Validasi 3: Cek bentrok jadwal
-        $errorBentrok = $this->cekBentrokJadwal($mahasiswaId, $jadwalBaru);
-        if ($errorBentrok) {
-            return $errorBentrok;
-        }
+            if ($jumlahPeserta >= $jadwalBaru->kuota) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Kelas penuh! Kuota sudah habis.',
+                ], 400);
+            }
 
-        // Validasi 4: Cek batas maksimal 24 SKS per semester
-        $totalSksSaatIni = Krs::where('mahasiswa_id', $mahasiswaId)
-            ->whereHas('jadwal', function ($q) use ($jadwalBaru) {
-                $q->where('semester_id', $jadwalBaru->semester_id);
-            })
-            ->with('jadwal.mataKuliah')
-            ->get()
-            ->sum(fn($krs) => $krs->jadwal->mataKuliah->sks ?? 0);
+            // Validasi 3: Cek bentrok jadwal
+            $errorBentrok = $this->cekBentrokJadwal($mahasiswaId, $jadwalBaru);
+            if ($errorBentrok) {
+                DB::rollBack();
+                return $errorBentrok;
+            }
 
-        $sksBaru = $jadwalBaru->mataKuliah->sks ?? 0;
+            // Validasi 4: Cek batas maksimal 24 SKS per semester
+            $totalSksSaatIni = Krs::join('jadwals', 'krs.jadwal_id', '=', 'jadwals.id')
+                ->join('mata_kuliahs', 'jadwals.mata_kuliah_id', '=', 'mata_kuliahs.id')
+                ->where('krs.mahasiswa_id', $mahasiswaId)
+                ->where('jadwals.semester_id', $jadwalBaru->semester_id)
+                ->sum('mata_kuliahs.sks');
 
-        if (($totalSksSaatIni + $sksBaru) > 24) {
-            return response()->json([
-                'message' => 'Melebihi batas 24 SKS!',
-                'detail'  => "SKS saat ini: {$totalSksSaatIni}, mata kuliah ini: {$sksBaru} SKS. Total akan menjadi " . ($totalSksSaatIni + $sksBaru) . " SKS.",
-            ], 400);
-        }
+            $sksBaru = $jadwalBaru->mataKuliah->sks ?? 0;
 
-        // Simpan KRS baru
-        $krsBaru = DB::transaction(function () use ($mahasiswaId, $jadwalBaru) {
-            return Krs::create([
+            if (($totalSksSaatIni + $sksBaru) > 24) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Melebihi batas 24 SKS!',
+                    'detail'  => "SKS saat ini: {$totalSksSaatIni}, mata kuliah ini: {$sksBaru} SKS. Total akan menjadi " . ($totalSksSaatIni + $sksBaru) . " SKS.",
+                ], 400);
+            }
+
+            // Simpan KRS baru
+            $krsBaru = Krs::create([
                 'mahasiswa_id' => $mahasiswaId,
                 'jadwal_id'    => $jadwalBaru->id,
-                'status'       => 'approved',
+                'status'       => 'pending',
             ]);
-        });
 
-        return response()->json([
-            'message' => 'Berhasil mengambil mata kuliah!',
-            'data'    => $krsBaru,
-        ], 201);
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Berhasil mengambil mata kuliah!',
+                'data'    => $krsBaru,
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Terjadi kesalahan sistem',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -183,9 +200,7 @@ class KrsController extends Controller
         ]);
     }
 
-    // ============================================================
     // METHOD ADMIN (Akses melalui /admin/krs)
-    // ============================================================
 
     /**
      * Mengambil seluruh daftar KRS beserta relasi terkait.
@@ -222,48 +237,66 @@ class KrsController extends Controller
         ]);
 
         $mahasiswaId = $request->mahasiswa_id;
-        $jadwalBaru  = Jadwal::with('mataKuliah', 'semester')->findOrFail($request->jadwal_id);
+        
+        DB::beginTransaction();
 
-        // Validasi 1: Cek duplikat pengambilan jadwal
-        $sudahMengambil = Krs::where('mahasiswa_id', $mahasiswaId)
-            ->where('jadwal_id', $jadwalBaru->id)
-            ->exists();
+        try {
+            $jadwalBaru  = Jadwal::with('mataKuliah', 'semester')
+                ->when(DB::getDriverName() !== 'sqlite', function ($q) {
+                    return $q->lockForUpdate();
+                })
+                ->findOrFail($request->jadwal_id);
 
-        if ($sudahMengambil) {
-            return response()->json([
-                'message' => 'Mahasiswa ini sudah mengambil jadwal tersebut.',
-            ], 400);
-        }
+            // Validasi 1: Cek duplikat pengambilan jadwal
+            $sudahMengambil = Krs::where('mahasiswa_id', $mahasiswaId)
+                ->where('jadwal_id', $jadwalBaru->id)
+                ->exists();
 
-        // Validasi 2: Cek ketersediaan kuota kelas
-        $jumlahPeserta = Krs::where('jadwal_id', $jadwalBaru->id)->count();
+            if ($sudahMengambil) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Mahasiswa ini sudah mengambil jadwal tersebut.',
+                ], 400);
+            }
 
-        if ($jumlahPeserta >= $jadwalBaru->kuota) {
-            return response()->json([
-                'message' => 'Kelas Penuh! Kuota sudah habis.',
-            ], 400);
-        }
+            // Validasi 2: Cek ketersediaan kuota kelas
+            $jumlahPeserta = Krs::where('jadwal_id', $jadwalBaru->id)->count();
 
-        // Validasi 3: Cek bentrok jadwal di hari dan semester yang sama
-        $errorBentrok = $this->cekBentrokJadwal($mahasiswaId, $jadwalBaru);
+            if ($jumlahPeserta >= $jadwalBaru->kuota) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Kelas Penuh! Kuota sudah habis.',
+                ], 400);
+            }
 
-        if ($errorBentrok) {
-            return $errorBentrok;
-        }
+            // Validasi 3: Cek bentrok jadwal di hari dan semester yang sama
+            $errorBentrok = $this->cekBentrokJadwal($mahasiswaId, $jadwalBaru);
 
-        // Simpan KRS baru dalam transaction
-        $krsBaru = DB::transaction(function () use ($mahasiswaId, $jadwalBaru) {
-            return Krs::create([
+            if ($errorBentrok) {
+                DB::rollBack();
+                return $errorBentrok;
+            }
+
+            // Simpan KRS baru
+            $krsBaru = Krs::create([
                 'mahasiswa_id' => $mahasiswaId,
                 'jadwal_id'    => $jadwalBaru->id,
                 'status'       => 'approved',
             ]);
-        });
 
-        return response()->json([
-            'message' => 'Berhasil mendaftarkan mata kuliah untuk mahasiswa',
-            'data'    => $krsBaru,
-        ], 201);
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Berhasil mendaftarkan mata kuliah untuk mahasiswa',
+                'data'    => $krsBaru,
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Terjadi kesalahan sistem.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -288,48 +321,68 @@ class KrsController extends Controller
         ]);
 
         $mahasiswaId = $request->mahasiswa_id;
-        $jadwalBaru  = Jadwal::with('mataKuliah', 'semester')->findOrFail($request->jadwal_id);
+        
+        DB::beginTransaction();
 
-        // Validasi 1: Cek duplikat (kecuali KRS yang sedang diedit)
-        $sudahMengambil = Krs::where('mahasiswa_id', $mahasiswaId)
-            ->where('jadwal_id', $jadwalBaru->id)
-            ->where('id', '!=', $id)
-            ->exists();
+        try {
+            $jadwalBaru  = Jadwal::with('mataKuliah', 'semester')
+                ->when(DB::getDriverName() !== 'sqlite', function ($q) {
+                    return $q->lockForUpdate();
+                })
+                ->findOrFail($request->jadwal_id);
 
-        if ($sudahMengambil) {
-            return response()->json([
-                'message' => 'Mahasiswa ini sudah mengambil jadwal tersebut.',
-            ], 400);
-        }
+            // Validasi 1: Cek duplikat (kecuali KRS yang sedang diedit)
+            $sudahMengambil = Krs::where('mahasiswa_id', $mahasiswaId)
+                ->where('jadwal_id', $jadwalBaru->id)
+                ->where('id', '!=', $id)
+                ->exists();
 
-        // Validasi 2: Cek kuota (hanya jika jadwal diganti ke jadwal lain)
-        if ($krs->jadwal_id != $jadwalBaru->id) {
-            $jumlahPeserta = Krs::where('jadwal_id', $jadwalBaru->id)->count();
-
-            if ($jumlahPeserta >= $jadwalBaru->kuota) {
+            if ($sudahMengambil) {
+                DB::rollBack();
                 return response()->json([
-                    'message' => 'Kelas Penuh! Kuota sudah habis.',
+                    'message' => 'Mahasiswa ini sudah mengambil jadwal tersebut.',
                 ], 400);
             }
+
+            // Validasi 2: Cek kuota (hanya jika jadwal diganti ke jadwal lain)
+            if ($krs->jadwal_id != $jadwalBaru->id) {
+                $jumlahPeserta = Krs::where('jadwal_id', $jadwalBaru->id)->count();
+
+                if ($jumlahPeserta >= $jadwalBaru->kuota) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'Kelas Penuh! Kuota sudah habis.',
+                    ], 400);
+                }
+            }
+
+            // Validasi 3: Cek bentrok jadwal (kecuali KRS yang sedang diedit)
+            $errorBentrok = $this->cekBentrokJadwal($mahasiswaId, $jadwalBaru, $id);
+
+            if ($errorBentrok) {
+                DB::rollBack();
+                return $errorBentrok;
+            }
+
+            // Eksekusi update KRS
+            $krs->update([
+                'mahasiswa_id' => $mahasiswaId,
+                'jadwal_id'    => $jadwalBaru->id,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Berhasil memperbarui KRS mahasiswa',
+                'data'    => $krs,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Terjadi kesalahan sistem.',
+                'error'   => $e->getMessage(),
+            ], 500);
         }
-
-        // Validasi 3: Cek bentrok jadwal (kecuali KRS yang sedang diedit)
-        $errorBentrok = $this->cekBentrokJadwal($mahasiswaId, $jadwalBaru, $id);
-
-        if ($errorBentrok) {
-            return $errorBentrok;
-        }
-
-        // Eksekusi update KRS
-        $krs->update([
-            'mahasiswa_id' => $mahasiswaId,
-            'jadwal_id'    => $jadwalBaru->id,
-        ]);
-
-        return response()->json([
-            'message' => 'Berhasil memperbarui KRS mahasiswa',
-            'data'    => $krs,
-        ]);
     }
 
     /**
@@ -369,35 +422,28 @@ class KrsController extends Controller
      */
     private function cekBentrokJadwal(string $mahasiswaId, Jadwal $jadwalBaru, ?string $krsIdDikecualikan = null)
     {
-        $queryKrsLainnya = Krs::with('jadwal')
-            ->where('mahasiswa_id', $mahasiswaId)
-            ->whereHas('jadwal', function ($query) use ($jadwalBaru) {
-                $query->where('semester_id', $jadwalBaru->semester_id);
-                $query->where('hari', $jadwalBaru->hari);
-            });
+        $queryKrsBentrok = Krs::join('jadwals', 'krs.jadwal_id', '=', 'jadwals.id')
+            ->where('krs.mahasiswa_id', $mahasiswaId)
+            ->where('jadwals.semester_id', $jadwalBaru->semester_id)
+            ->where('jadwals.hari', $jadwalBaru->hari)
+            ->where('jadwals.jam_mulai', '<', $jadwalBaru->jam_selesai)
+            ->where('jadwals.jam_selesai', '>', $jadwalBaru->jam_mulai)
+            ->select('krs.*');
 
         // Kecualikan KRS tertentu (digunakan saat proses update)
         if ($krsIdDikecualikan) {
-            $queryKrsLainnya->where('id', '!=', $krsIdDikecualikan);
+            $queryKrsBentrok->where('krs.id', '!=', $krsIdDikecualikan);
         }
 
-        $daftarKrsLainnya = $queryKrsLainnya->get();
+        $krsBentrok = $queryKrsBentrok->with('jadwal.mataKuliah')->first();
 
-        foreach ($daftarKrsLainnya as $krsLain) {
-            $jadwalLama = $krsLain->jadwal;
+        if ($krsBentrok) {
+            $namaMatkul = $krsBentrok->jadwal->mataKuliah->nama_matkul ?? 'Tidak diketahui';
 
-            // Cek tumpang tindih waktu: jadwal baru mulai sebelum lama selesai DAN lama mulai sebelum baru selesai
-            $isBentrok = $jadwalBaru->jam_mulai < $jadwalLama->jam_selesai
-                && $jadwalLama->jam_mulai < $jadwalBaru->jam_selesai;
-
-            if ($isBentrok) {
-                $namaMatkul = $jadwalLama->mataKuliah->nama_matkul ?? 'Tidak diketahui';
-
-                return response()->json([
-                    'message' => 'Jadwal Bentrok!',
-                    'detail'  => "Mahasiswa ini sudah ada kelas: {$namaMatkul}",
-                ], 400);
-            }
+            return response()->json([
+                'message' => 'Jadwal Bentrok!',
+                'detail'  => "Mahasiswa ini sudah ada kelas: {$namaMatkul}",
+            ], 400);
         }
 
         return null;

@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import 'auth_service.dart';
@@ -40,19 +42,27 @@ abstract class BaseService {
     final token = await _getValidToken();
     final url = Uri.parse('$baseUrl$endpoint');
 
-    final response = await http
-        .get(url, headers: _buildHeaders(token))
-        .timeout(Duration(seconds: ApiConfig.timeoutSeconds));
+    try {
+      final response = await http
+          .get(url, headers: _buildHeaders(token))
+          .timeout(Duration(seconds: ApiConfig.timeoutSeconds));
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+
+      _handleError(response);
+    } on SocketException {
+      throw Exception(
+        'Tidak ada koneksi internet. Silakan periksa jaringan Anda.',
+      );
+    } on TimeoutException {
+      throw Exception('Koneksi terputus (Timeout). Server sangat lambat.');
     }
-
-    _handleError(response);
   }
 
   /// POST request dengan autentikasi.
-  /// Return `true` jika statusCode 201 (Created).
+  /// Return `true` jika statusCode 201 (Created) atau 200 (OK).
   Future<bool> authenticatedPost(
     String endpoint,
     Map<String, dynamic> body,
@@ -60,13 +70,21 @@ abstract class BaseService {
     final token = await _getValidToken();
     final url = Uri.parse('$baseUrl$endpoint');
 
-    final response = await http
-        .post(url, headers: _buildHeaders(token), body: jsonEncode(body))
-        .timeout(Duration(seconds: ApiConfig.timeoutSeconds));
+    try {
+      final response = await http
+          .post(url, headers: _buildHeaders(token), body: jsonEncode(body))
+          .timeout(Duration(seconds: ApiConfig.timeoutSeconds));
 
-    if (response.statusCode == 201) return true;
+      if (response.statusCode == 201 || response.statusCode == 200) return true;
 
-    _handleError(response);
+      _handleError(response);
+    } on SocketException {
+      throw Exception(
+        'Tidak ada koneksi internet. Silakan periksa jaringan Anda.',
+      );
+    } on TimeoutException {
+      throw Exception('Koneksi terputus (Timeout). Server sangat lambat.');
+    }
   }
 
   /// PUT request dengan autentikasi.
@@ -78,13 +96,21 @@ abstract class BaseService {
     final token = await _getValidToken();
     final url = Uri.parse('$baseUrl$endpoint');
 
-    final response = await http
-        .put(url, headers: _buildHeaders(token), body: jsonEncode(body))
-        .timeout(Duration(seconds: ApiConfig.timeoutSeconds));
+    try {
+      final response = await http
+          .put(url, headers: _buildHeaders(token), body: jsonEncode(body))
+          .timeout(Duration(seconds: ApiConfig.timeoutSeconds));
 
-    if (response.statusCode == 200) return true;
+      if (response.statusCode == 200) return true;
 
-    _handleError(response);
+      _handleError(response);
+    } on SocketException {
+      throw Exception(
+        'Tidak ada koneksi internet. Silakan periksa jaringan Anda.',
+      );
+    } on TimeoutException {
+      throw Exception('Koneksi terputus (Timeout). Server sangat lambat.');
+    }
   }
 
   /// DELETE request dengan autentikasi.
@@ -93,13 +119,21 @@ abstract class BaseService {
     final token = await _getValidToken();
     final url = Uri.parse('$baseUrl$endpoint');
 
-    final response = await http
-        .delete(url, headers: _buildHeaders(token))
-        .timeout(Duration(seconds: ApiConfig.timeoutSeconds));
+    try {
+      final response = await http
+          .delete(url, headers: _buildHeaders(token))
+          .timeout(Duration(seconds: ApiConfig.timeoutSeconds));
 
-    if (response.statusCode == 200) return true;
+      if (response.statusCode == 200) return true;
 
-    _handleError(response);
+      _handleError(response);
+    } on SocketException {
+      throw Exception(
+        'Tidak ada koneksi internet. Silakan periksa jaringan Anda.',
+      );
+    } on TimeoutException {
+      throw Exception('Koneksi terputus (Timeout). Server sangat lambat.');
+    }
   }
 
   // ERROR HANDLING

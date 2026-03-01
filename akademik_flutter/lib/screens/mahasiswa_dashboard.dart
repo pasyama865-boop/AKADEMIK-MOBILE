@@ -9,6 +9,8 @@ import 'mahasiswa_jadwal_page.dart';
 import 'login.dart';
 import 'profile.dart';
 import 'nilai.dart';
+import '../widgets/shimmer_loader.dart';
+import '../utils/pdf_export_util.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -62,7 +64,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     } catch (e) {
       final prefs = await SharedPreferences.getInstance();
+
       if (mounted) {
+        // Tampilkan snackbar jika ada error koneksi / offline
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.wifi_off, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(e.toString().replaceAll('Exception: ', '')),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Coba Lagi',
+              textColor: Colors.white,
+              onPressed: () {
+                setState(() => _isLoading = true);
+                _loadDashboardData();
+              },
+            ),
+          ),
+        );
+
         setState(() {
           _nama = prefs.getString('name') ?? 'Mahasiswa';
           _isLoading = false;
@@ -164,6 +192,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.print, color: AppColors.primary),
+            onPressed: () async {
+              try {
+                // Tampilkan snackbar progress
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Menyiapkan file PDF...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+                await PdfExportUtil.generateAndPrintKhsPdf(
+                  _nama,
+                  _krsList,
+                  _totalSks,
+                );
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Gagal membuat PDF'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
+            },
+            tooltip: 'Cetak/Uduh KHS',
+          ),
+          IconButton(
             icon: const Icon(
               Icons.person_outline,
               color: AppColors.textPrimary,
@@ -186,9 +243,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: AppColors.primary,
         backgroundColor: AppColors.surface,
         child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              )
+            ? _buildShimmerLoading()
             : SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16.0),
@@ -248,6 +303,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // WIDGET BUILDERS
+
+  Widget _buildShimmerLoading() {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const ShimmerLoader(
+            width: double.infinity,
+            height: 120,
+            borderRadius: 16,
+          ),
+          const SizedBox(height: 20),
+          const ShimmerLoader(
+            width: double.infinity,
+            height: 80,
+            borderRadius: 14,
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: const ShimmerLoader(
+                  width: double.infinity,
+                  height: 100,
+                  borderRadius: 12,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: const ShimmerLoader(
+                  width: double.infinity,
+                  height: 100,
+                  borderRadius: 12,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: const ShimmerLoader(
+                  width: double.infinity,
+                  height: 100,
+                  borderRadius: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const ShimmerLoader(width: 150, height: 20, borderRadius: 4),
+          const SizedBox(height: 12),
+          const ShimmerLoader(
+            width: double.infinity,
+            height: 150,
+            borderRadius: 12,
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildWelcomeCard() {
     return Container(
