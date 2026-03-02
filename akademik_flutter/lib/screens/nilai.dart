@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../models/krs.dart';
-import '../services/krs_service.dart';
+import '../services/mahasiswa_krs_service.dart';
 
 class NilaiScreen extends StatefulWidget {
   const NilaiScreen({super.key});
@@ -11,7 +11,7 @@ class NilaiScreen extends StatefulWidget {
 }
 
 class _NilaiScreenState extends State<NilaiScreen> {
-  final KrsService _krsService = KrsService();
+  final MahasiswaKrsService _krsService = MahasiswaKrsService();
   late Future<List<Krs>> _krsFuture;
 
   @override
@@ -22,65 +22,19 @@ class _NilaiScreenState extends State<NilaiScreen> {
 
   void _refreshData() {
     setState(() {
-      _krsFuture = _krsService.getKrsList();
+      _krsFuture = _krsService.getMyKrs().then((data) {
+        final List<Krs> allKrs = data['krs'] as List<Krs>;
+        // KHS/Nilai screen ONLY shows courses that already have grades
+        return allKrs
+            .where(
+              (k) =>
+                  k.nilaiAkhir != null &&
+                  k.nilaiAkhir!.isNotEmpty &&
+                  k.nilaiAkhir != 'null',
+            )
+            .toList();
+      });
     });
-  }
-
-  Future<void> _handleDelete(String id, String namaMatkul) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text(
-          "Hapus Mata Kuliah",
-          style: TextStyle(color: AppColors.textPrimary),
-        ),
-        content: Text(
-          "Yakin ingin membatalkan $namaMatkul?",
-          style: const TextStyle(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text(
-              "Batal",
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              "Hapus",
-              style: TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    try {
-      await _krsService.deleteKrs(id);
-      if (mounted) {
-        _showSnackBar("Mata kuliah berhasil dihapus!");
-        _refreshData();
-      }
-    } catch (e) {
-      if (mounted) {
-        _showSnackBar("Gagal: ${e.toString()}", isError: true);
-      }
-    }
-  }
-
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? AppColors.error : AppColors.success,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
@@ -89,7 +43,7 @@ class _NilaiScreenState extends State<NilaiScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          "Daftar Nilai & KRS",
+          "Nilai & KHS",
           style: TextStyle(color: AppColors.textPrimary),
         ),
         backgroundColor: AppColors.surface,
@@ -138,19 +92,112 @@ class _NilaiScreenState extends State<NilaiScreen> {
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
               child: Text(
-                "Belum ada mata kuliah yang diambil.",
+                "Belum ada nilai yang keluar.",
                 style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
               ),
             );
           }
 
           final krsList = snapshot.data!;
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: krsList.length,
-            itemBuilder: (context, index) => _buildKrsCard(krsList[index]),
+          // Hitung IP & SKS
+          int totalSks = 0;
+          double totalBobot = 0.0;
+          for (var k in krsList) {
+            final nilai = k.nilaiAkhir;
+            if (nilai != null && nilai.isNotEmpty) {
+              int sks = k.sks;
+              double bobot = 0;
+              if (nilai == 'A')
+                bobot = 4.0;
+              else if (nilai == 'B')
+                bobot = 3.0;
+              else if (nilai == 'C')
+                bobot = 2.0;
+              else if (nilai == 'D')
+                bobot = 1.0;
+              else if (nilai == 'E')
+                bobot = 0.0;
+
+              totalSks += sks;
+              totalBobot += (bobot * sks);
+            }
+          }
+          final String ipSemester = totalSks > 0
+              ? (totalBobot / totalSks).toStringAsFixed(2)
+              : "0.00";
+
+          return Column(
+            children: [
+              _buildSummaryCard(ipSemester, totalSks),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: krsList.length,
+                  itemBuilder: (context, index) =>
+                      _buildKrsCard(krsList[index]),
+                ),
+              ),
+            ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(String ip, int totalSks) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Column(
+            children: [
+              const Text(
+                "Indeks Prestasi",
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                ip,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          Container(width: 1, height: 40, color: Colors.white30),
+          Column(
+            children: [
+              const Text(
+                "Total SKS Lulus",
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "$totalSks",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -188,17 +235,10 @@ class _NilaiScreenState extends State<NilaiScreen> {
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 8.0),
           child: Text(
-            "${krs.hari} • ${krs.jamFormatted}",
+            "${krs.sks} SKS • Semester ${krs.namaSemester}",
             style: const TextStyle(color: AppColors.textSecondary),
           ),
         ),
-        trailing: !isNilaiMasuk
-            ? IconButton(
-                icon: const Icon(Icons.delete_outline, color: AppColors.error),
-                tooltip: "Batalkan Mata Kuliah",
-                onPressed: () => _handleDelete(krs.id, krs.namaMatkul),
-              )
-            : null,
       ),
     );
   }

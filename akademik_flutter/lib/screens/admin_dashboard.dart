@@ -6,6 +6,7 @@ import '../widgets/kartu_statistik.dart';
 import '../widgets/kartu_menu.dart';
 import '../widgets/loading_berkedip.dart';
 import 'dosen_page.dart';
+import 'mahasiswa_page.dart';
 import 'matakuliah_page.dart';
 import 'ruangan_page.dart';
 import 'semester_page.dart';
@@ -81,7 +82,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         ),
         content: Text(
-          "Yakin ingin Keluar??",
+          "Yakin ingin Keluar?",
           style: GoogleFonts.inter(color: Colors.grey[400]),
         ),
         actions: [
@@ -301,7 +302,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        "Panel Manajemen",
+                        "Menu Manajemen",
                         style: GoogleFonts.inter(
                           color: Colors.white,
                           fontSize: 18,
@@ -321,7 +322,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     MenuCard(
-                      title: "Manajemen Mahasiswa",
+                      title: "Data Mahasiswa",
                       icon: Icons.people_rounded,
                       color: Colors.indigoAccent,
                       badge: _isLoading
@@ -330,13 +331,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const MataKuliahPage(),
+                          builder: (_) => const MahasiswaPage(),
                         ),
                       ).then((_) => _loadAllData()),
                     ),
                     const SizedBox(height: 12),
                     MenuCard(
-                      title: "Manajemen Dosen",
+                      title: " Data Dosen",
                       icon: Icons.badge_rounded,
                       color: Colors.greenAccent,
                       badge: _isLoading
@@ -345,6 +346,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const DosenPage()),
+                      ).then((_) => _loadAllData()),
+                    ),
+                    const SizedBox(height: 12),
+                    MenuCard(
+                      title: "Data Mata Kuliah",
+                      icon: Icons.library_books_rounded,
+                      color: Colors.cyanAccent,
+                      badge: _isLoading
+                          ? "..."
+                          : "${_getStatValue('total_matakuliah')} MK",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MataKuliahPage(),
+                        ),
                       ).then((_) => _loadAllData()),
                     ),
                     const SizedBox(height: 12),
@@ -375,12 +391,43 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                     const SizedBox(height: 12),
                     MenuCard(
-                      title: "Data Master Lainnya",
-                      icon: Icons.folder_special_rounded,
-                      color: Colors.blueAccent,
-                      onTap: () => _tampilkanDialogMaster(context),
+                      title: "Ruangan",
+                      icon: Icons.post_add_rounded,
+                      color: Colors.purpleAccent,
+                      badge: _isLoading
+                          ? "..."
+                          : "${_getStatValue('total_ruangan')} Rgn",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const RuanganPage()),
+                      ).then((_) => _loadAllData()),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 12),
+                    MenuCard(
+                      title: "Semester",
+                      icon: Icons.post_add_rounded,
+                      color: Colors.purpleAccent,
+                      badge: _isLoading
+                          ? "..."
+                          : "${_getStatValue('total_semester')} Sem",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SemesterPage()),
+                      ).then((_) => _loadAllData()),
+                    ),
+                    const SizedBox(height: 12),
+                    MenuCard(
+                      title: "Admin",
+                      icon: Icons.post_add_rounded,
+                      color: Colors.purpleAccent,
+                      badge: _isLoading
+                          ? "..."
+                          : "${_getStatValue('total_admin')} Adm",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const UserPage()),
+                      ).then((_) => _loadAllData()),
+                    ),
                   ]),
                 ),
               ),
@@ -388,83 +435,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         ),
       ),
-    );
-  }
-
-  void _tampilkanDialogMaster(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[700],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                "Data Master Lainnya",
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              MenuCard(
-                title: "Manajemen Ruangan",
-                icon: Icons.door_front_door_rounded,
-                color: Colors.orangeAccent,
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const RuanganPage()),
-                  ).then((_) => _loadAllData());
-                },
-              ),
-              const SizedBox(height: 12),
-              MenuCard(
-                title: "Manajemen Semester",
-                icon: Icons.date_range_rounded,
-                color: Colors.pinkAccent,
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SemesterPage()),
-                  ).then((_) => _loadAllData());
-                },
-              ),
-              const SizedBox(height: 12),
-              MenuCard(
-                title: "Manajemen Admin",
-                icon: Icons.admin_panel_settings_rounded,
-                color: Colors.blueAccent,
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const UserPage()),
-                  ).then((_) => _loadAllData());
-                },
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
     );
   }
 }

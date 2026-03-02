@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../config/app_colors.dart';
+import '../providers/theme_provider.dart';
 import '../services/auth_service.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -66,6 +68,47 @@ class ProfileScreen extends StatelessWidget {
                     Icons.admin_panel_settings,
                     "Peran (Role)",
                     user['role'] ?? '-',
+                  ),
+                  const SizedBox(height: 20),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Pengaturan System",
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    color: AppColors.cardBackground,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Consumer<ThemeProvider>(
+                      builder: (context, themeProvider, child) {
+                        return SwitchListTile(
+                          activeThumbColor: AppColors.primary,
+                          secondary: const Icon(
+                            Icons.dark_mode_rounded,
+                            color: AppColors.primary,
+                          ),
+                          title: const Text(
+                            "Dark Mode",
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          value: themeProvider.isDarkMode,
+                          onChanged: (val) {
+                            themeProvider.toggleTheme(val);
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),

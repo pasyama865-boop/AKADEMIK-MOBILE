@@ -10,8 +10,6 @@ Desain harus modern, clean, minimalis, scalable, dan mendukung **Light Mode & Da
 
 Gunakan pendekatan design system terstruktur, berbasis mobile-first.
 
----
-
 # 🎯 1. TUJUAN PRODUK
 
 Aplikasi ini adalah sistem informasi akademik berbasis mobile yang memungkinkan:
@@ -38,8 +36,6 @@ Fokus utama:
 * Responsive untuk berbagai ukuran layar
 * Menggunakan bottom navigation untuk Mahasiswa & Dosen
 * Menggunakan tab/drawer untuk Admin
-
----
 
 # 🎨 3. DESIGN STYLE YANG DIINGINKAN
 

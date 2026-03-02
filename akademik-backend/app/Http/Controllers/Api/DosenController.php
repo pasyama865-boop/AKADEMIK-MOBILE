@@ -55,20 +55,65 @@ class DosenController extends Controller
         $user = Auth::user();
 
         $jadwalList = Jadwal::where('dosen_id', $user->id)
-            ->with('mataKuliah')
+            ->with(['mataKuliah', 'krs'])
             ->withCount('krs')
             ->get();
 
         $totalKelas = $jadwalList->count();
         $totalMahasiswa = $jadwalList->sum('krs_count');
-        $totalSks = $jadwalList->sum(function ($j) {
-            return $j->mataKuliah ? $j->mataKuliah->sks : 0;
-        });
+
+        $nilaiDraft = 0;
+        $krsWithNilaiCount = 0;
+        
+        $gradesCount = ['A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0];
+
+        $kelasRekap = [];
+
+        foreach($jadwalList as $jadwal) {
+            $hasUnpublishedNilai = false;
+            $classGrades = ['A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0];
+
+            foreach($jadwal->krs as $krs) {
+                if(empty($krs->nilai_akhir)) {
+                    $hasUnpublishedNilai = true;
+                } else {
+                    $krsWithNilaiCount++;
+                    $grade = strtoupper(trim($krs->nilai_akhir));
+                    if (isset($gradesCount[$grade])) {
+                        $gradesCount[$grade]++;
+                    }
+                    if (isset($classGrades[$grade])) {
+                        $classGrades[$grade]++;
+                    }
+                }
+            }
+            if ($hasUnpublishedNilai && $jadwal->krs->count() > 0) {
+                $nilaiDraft++;
+            }
+
+            $kelasRekap[] = [
+                'nama_matkul' => $jadwal->mataKuliah ? $jadwal->mataKuliah->nama_matkul : 'Unknown',
+                'total_mahasiswa' => $jadwal->krs_count,
+                'distribusi' => $classGrades
+            ];
+        }
+
+        $publikasiPersen = $totalMahasiswa > 0 ? round(($krsWithNilaiCount / $totalMahasiswa) * 100) : 0;
+
+        $krsPending = 0;
+        if ($user->dosen) {
+            $mahasiswaIds = Mahasiswa::where('dosen_id', $user->dosen->id)->pluck('id');
+            $krsPending = Krs::whereIn('mahasiswa_id', $mahasiswaIds)->where('status', 'pending')->count();
+        }
 
         return response()->json([
             'total_kelas' => $totalKelas,
             'total_mahasiswa' => $totalMahasiswa,
-            'total_sks' => $totalSks,
+            'krs_pending' => $krsPending,
+            'nilai_draft' => $nilaiDraft,
+            'publikasi_persen' => $publikasiPersen,
+            'distribusi_nilai' => $gradesCount,
+            'kelas_rekap' => $kelasRekap,
         ]);
     }
 
@@ -132,6 +177,71 @@ class DosenController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => "Berhasil menyetujui $affected mata kuliah KRS untuk mahasiswa {$mahasiswa->user->name}",
+        ]);
+    }
+
+    /**
+     * Dosen: Mengambil daftar mahasiswa yang tergabung dalam suatu kelas/jadwal.
+     */
+    public function getKelasMahasiswa($jadwalId)
+    {
+        $user = Auth::user();
+        if (!$user->dosen) {
+            return response()->json(['message' => 'Anda bukan Dosen'], 403);
+        }
+
+        // Verifikasi jadwal ini milik dosen ybs
+        $jadwal = Jadwal::where('id', $jadwalId)->where('dosen_id', $user->id)->first();
+        if (!$jadwal) {
+            return response()->json(['message' => 'Kelas tidak ditemukan atau Anda tidak mengajar kelas ini'], 404);
+        }
+
+        // Ambil mahasiswa yang krs nya on jadwal tsb
+        $krsList = Krs::where('jadwal_id', $jadwalId)
+            ->with(['mahasiswa.user'])
+            ->get()
+            ->map(function ($krs) {
+                return [
+                    'krs_id' => $krs->id,
+                    'status' => $krs->status,
+                    'nim' => $krs->mahasiswa->nim ?? '-',
+                    'nama' => $krs->mahasiswa->user->name ?? '-',
+                    'nilai_akhir' => $krs->nilai_akhir,
+                ];
+            });
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $krsList,
+        ]);
+    }
+
+    /**
+     * Dosen: Menginputkan nilai ke rekaman KRS
+     */
+    public function inputNilai(Request $request, $krsId)
+    {
+        $request->validate([
+            'nilai_akhir' => 'required|string|in:A,B,C,D,E'
+        ]);
+
+        $user = Auth::user();
+        if (!$user->dosen) {
+            return response()->json(['message' => 'Anda bukan Dosen'], 403);
+        }
+
+        $krs = Krs::where('id', $krsId)->with('jadwal')->first();
+        if (!$krs || !$krs->jadwal || $krs->jadwal->dosen_id !== $user->id) {
+            return response()->json(['message' => 'KRS/Mata Kuliah tidak ditemukan atau itu bukan kelas Anda'], 404);
+        }
+
+        $krs->nilai_akhir = $request->nilai_akhir;
+        $krs->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Nilai berhasil disimpan.',
+            'data' => $krs
         ]);
     }
 }

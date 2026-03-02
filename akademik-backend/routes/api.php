@@ -87,6 +87,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
         Route::get('stats', [DosenController::class, 'getMyStats']);
         Route::get('mahasiswa', [DosenController::class, 'getMahasiswaBimbingan']);
         Route::post('mahasiswa/{id}/approve-krs', [DosenController::class, 'approveKrsMahasiswa']);
+        Route::get('kelas/{jadwalId}/mahasiswa', [DosenController::class, 'getKelasMahasiswa']);
+        Route::post('krs/{krsId}/nilai', [DosenController::class, 'inputNilai']);
     });
 
     // ROUTE UMUM 
