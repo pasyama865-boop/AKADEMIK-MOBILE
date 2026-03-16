@@ -1,6 +1,6 @@
 
 class ApiConfig {
-  static const String baseUrl = 'http://192.168.100.42:8000/api';
+  static const String baseUrl = 'http://localhost:8001/api';
 
   static const int timeoutSeconds = 30;
 }
